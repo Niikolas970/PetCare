@@ -39,6 +39,40 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Pets",
+      "item": [
+        {
+          "name": "Listar mascotas activas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"La respuesta es una lista\", function () {\r\n    pm.expect(body).to.be.an(\"array\");\r\n});\r\n\r\npm.test(\"Todas las mascotas están activas\", function () {\r\n    body.forEach(pet => pm.expect(pet.status).to.eql(\"ACTIVE\"));\r\n});\r\n\r\npm.test(\"Cada mascota tiene nombre y especie\", function () {\r\n    body.forEach(pet => {\r\n        pm.expect(pet.name).to.be.a(\"string\").and.not.empty;\r\n        pm.expect(pet.species).to.be.a(\"string\").and.not.empty;\r\n    });\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets.",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets."
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
