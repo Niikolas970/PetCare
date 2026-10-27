@@ -33,5 +33,5 @@ public record CreatePetRequest(
 
         @Size(max = 2000, message = "Las notas no pueden superar 2000 caracteres")
         String notes
-) {
+) implements PetDetails {
 }

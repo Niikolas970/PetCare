@@ -80,7 +80,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 201 Created\", function () {\r\n    pm.response.to.have.status(201);\r\n});\r\n\r\npm.test(\"Devuelve el id generado\", function () {\r\n    pm.expect(body.id).to.be.a(\"number\");\r\n});\r\n\r\npm.test(\"Incluye el encabezado Location\", function () {\r\n    pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/pets/\" + body.id);\r\n});\r\n\r\npm.test(\"La mascota se crea activa\", function () {\r\n    pm.expect(body.status).to.eql(\"ACTIVE\");\r\n});\r\n\r\npm.test(\"Guarda los datos enviados\", function () {\r\n    pm.expect(body.name).to.eql(\"Coco\");\r\n    pm.expect(body.species).to.eql(\"Conejo\");\r\n});"
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 201 Created\", function () {\r\n    pm.response.to.have.status(201);\r\n});\r\n\r\npm.test(\"Devuelve el id generado\", function () {\r\n    pm.expect(body.id).to.be.a(\"number\");\r\n});\r\n\r\npm.test(\"Incluye el encabezado Location\", function () {\r\n    pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/pets/\" + body.id);\r\n});\r\n\r\npm.test(\"La mascota se crea activa\", function () {\r\n    pm.expect(body.status).to.eql(\"ACTIVE\");\r\n});\r\n\r\npm.test(\"Guarda los datos enviados\", function () {\r\n    pm.expect(body.name).to.eql(\"Coco\");\r\n    pm.expect(body.species).to.eql(\"Conejo\");\r\n});\r\n\r\npm.collectionVariables.set(\"petId\", body.id);"
                 ]
               }
             },
@@ -114,6 +114,106 @@
               "path": [
                 "api",
                 "pets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver mascota por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Devuelve la mascota creada\", function () {\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n});\r\n\r\npm.test(\"Tiene los datos con los que se creó\", function () {\r\n    pm.expect(body.name).to.eql(\"Coco\");\r\n    pm.expect(body.species).to.eql(\"Conejo\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Editar mascota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Devuelve la mascota creada\", function () {\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n});\r\n\r\npm.test(\"Actualiza el nombre\", function () {\r\n    pm.expect(body.name).to.eql(\"Coco Editada\");\r\n});\r\n\r\npm.test(\"Actualiza el peso\", function () {\r\n    pm.expect(body.weightKg).to.eql(2.1);\r\n});\r\n\r\npm.test(\"Sigue activa\", function () {\r\n    pm.expect(body.status).to.eql(\"ACTIVE\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Coco Editada\",\r\n  \"species\": \"Conejo\",\r\n  \"breed\": \"Cabeza de león\",\r\n  \"sex\": \"FEMALE\",\r\n  \"birthDate\": \"2025-02-01\",\r\n  \"birthDateIsEstimated\": true,\r\n  \"weightKg\": 2.1,\r\n  \"notes\": \"Le gusta la zanahoria\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Archivar mascota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"Devuelve la mascota creada\", function () {\r\n    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"petId\")));\r\n});\r\n\r\npm.test(\"La mascota queda archivada\", function () {\r\n    pm.expect(body.status).to.eql(\"ARCHIVED\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "archive"
               ]
             }
           },
@@ -190,6 +290,36 @@
               "path": [
                 "api",
                 "pets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver mascota inexistente (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 404 Not Found\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Explica que la mascota no existe\", function () {\r\n    pm.expect(body.message).to.include(\"no existe\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "999999"
               ]
             }
           },
