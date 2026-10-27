@@ -60,13 +60,136 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/pets.",
+              "raw": "{{baseUrl}}/api/pets",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "pets."
+                "pets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear mascota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 201 Created\", function () {\r\n    pm.response.to.have.status(201);\r\n});\r\n\r\npm.test(\"Devuelve el id generado\", function () {\r\n    pm.expect(body.id).to.be.a(\"number\");\r\n});\r\n\r\npm.test(\"Incluye el encabezado Location\", function () {\r\n    pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/api/pets/\" + body.id);\r\n});\r\n\r\npm.test(\"La mascota se crea activa\", function () {\r\n    pm.expect(body.status).to.eql(\"ACTIVE\");\r\n});\r\n\r\npm.test(\"Guarda los datos enviados\", function () {\r\n    pm.expect(body.name).to.eql(\"Coco\");\r\n    pm.expect(body.species).to.eql(\"Conejo\");\r\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"householdId\": 1,\r\n  \"name\": \"Coco\",\r\n  \"species\": \"Conejo\",\r\n  \"breed\": \"Cabeza de león\",\r\n  \"sex\": \"FEMALE\",\r\n  \"birthDate\": \"2025-02-01\",\r\n  \"birthDateIsEstimated\": true,\r\n  \"weightKg\": 1.8,\r\n  \"notes\": \"Le gusta la zanahoria\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear mascota sin nombre (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "     const body = pm.response.json();\r\n\r\n     pm.test(\"Responde 400 Bad Request\", function () {\r\n         pm.response.to.have.status(400);\r\n     });\r\n\r\n     pm.test(\"Indica error en el nombre\", function () {\r\n         pm.expect(body.errors).to.have.property(\"name\");\r\n     });\r\n\r\n     pm.test(\"Indica error en el peso\", function () {\r\n         pm.expect(body.errors).to.have.property(\"weightKg\");\r\n     });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "     {\r\n       \"householdId\": 1,\r\n       \"name\": \"\",\r\n       \"species\": \"Perro\",\r\n       \"weightKg\": -5\r\n     }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear mascota en hogar inexistente (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"Responde 404 Not Found\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\npm.test(\"Explica que el hogar no existe\", function () {\r\n    pm.expect(body.message).to.include(\"no existe\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"householdId\": 999,\r\n  \"name\": \"Prueba 999\",\r\n  \"species\": \"Conejo\",\r\n  \"sex\": \"FEMALE\",\r\n  \"weightKg\": 1.8\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
               ]
             }
           },
