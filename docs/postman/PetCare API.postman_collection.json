@@ -1,0 +1,44 @@
+{
+  "info": {
+    "_postman_id": "d073704b-7901-4c3b-bfc0-64b56e12f057",
+    "name": "PetCare API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57053896"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Verificar estado del backend",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\r\n\r\npm.test(\"El servidor responde 200 OK\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"El backend reporta estado UP\", function () {\r\n    pm.expect(body.status).to.eql(\"UP\");\r\n});\r\n\r\npm.test(\"Está conectado a la base petcare_db\", function () {\r\n    pm.expect(body.database).to.eql(\"petcare_db\");\r\n});\r\n\r\npm.test(\"Incluye los contadores de usuarios y mascotas\", function () {\r\n    pm.expect(body).to.have.property(\"usersCount\");\r\n    pm.expect(body).to.have.property(\"petsCount\");\r\n});\r\n\r\npm.test(\"Responde en menos de 1 segundo\", function () {\r\n    pm.expect(pm.response.responseTime).to.be.below(1000);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
