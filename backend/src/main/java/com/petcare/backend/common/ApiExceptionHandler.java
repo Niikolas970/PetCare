@@ -3,6 +3,8 @@ package com.petcare.backend.common;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.petcare.backend.auth.InvalidCredentialsException;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +49,14 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBusinessRule(BusinessRuleException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                 "status", 409,
+                "message", ex.getMessage()
+        ));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "status", 401,
                 "message", ex.getMessage()
         ));
     }
