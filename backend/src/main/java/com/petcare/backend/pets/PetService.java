@@ -61,6 +61,13 @@ public class PetService {
         return petRepository.save(pet);
     }
 
+    @Transactional
+    public Pet restore(Long id) {
+        Pet pet = getById(id);
+        pet.setStatus(PetStatus.ACTIVE);
+        return petRepository.save(pet);
+    }
+
     private void applyDetails(Pet pet, PetDetails details) {
         pet.setName(details.name().trim());
         pet.setSpecies(details.species().trim());

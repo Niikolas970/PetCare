@@ -52,4 +52,9 @@ public class PetController {
     public Pet archivePet(@PathVariable Long id) {
         return petService.archive(id);
     }
+
+    @PatchMapping("/{id}/restore")
+    public Pet restorePet(@PathVariable Long id) {
+        return petService.restore(id);
+    }
 }
