@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "d073704b-7901-4c3b-bfc0-64b56e12f057",
+    "_postman_id": "98698ba7-244a-404f-bd2b-cf10c5e28a63",
     "name": "PetCare API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "57053896"
@@ -220,6 +220,76 @@
           "response": []
         },
         {
+          "name": "Editar mascota archivada (debe fallar).",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 Conflict\", function () {\r\n    pm.response.to.have.status(409);\r\n});\r\n\r\npm.test(\"Explica que debe restaurarse primero\", function () {\r\n    pm.expect(pm.response.json().message).to.include(\"Restáurala primero\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Coco Editada\",\r\n  \"species\": \"Conejo\",\r\n  \"breed\": \"Cabeza de león\",\r\n  \"sex\": \"FEMALE\",\r\n  \"birthDate\": \"2025-02-01\",\r\n  \"birthDateIsEstimated\": true,\r\n  \"weightKg\": 2.1,\r\n  \"notes\": \"Le gusta la zanahoria\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Restaurar mascota",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   pm.test(\"Responde 200 OK\", function () {\r\n       pm.response.to.have.status(200);\r\n   });\r\n\r\n   pm.test(\"La mascota vuelve a estar activa\", function () {\r\n       pm.expect(pm.response.json().status).to.eql(\"ACTIVE\");\r\n   });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/restore",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "restore"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Crear mascota sin nombre (debe fallar)",
           "event": [
             {
@@ -326,6 +396,12 @@
           "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "petId",
+      "value": ""
     }
   ]
 }

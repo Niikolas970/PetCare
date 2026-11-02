@@ -2,6 +2,7 @@ package com.petcare.backend.pets;
 
 import java.util.List;
 
+import com.petcare.backend.common.BusinessRuleException;
 import com.petcare.backend.common.ResourceNotFoundException;
 import com.petcare.backend.households.HouseholdRepository;
 
@@ -48,6 +49,13 @@ public class PetService {
     @Transactional
     public Pet update(Long id, UpdatePetRequest request) {
         Pet pet = getById(id);
+
+        // Regla de negocio: una mascota archivada no se edita
+        if (pet.getStatus() == PetStatus.ARCHIVED) {
+            throw new BusinessRuleException(
+                    "No se puede editar una mascota archivada. Restáurala primero.");
+        }
+
         applyDetails(pet, request);
 
         return petRepository.save(pet);
@@ -65,6 +73,7 @@ public class PetService {
     public Pet restore(Long id) {
         Pet pet = getById(id);
         pet.setStatus(PetStatus.ACTIVE);
+
         return petRepository.save(pet);
     }
 
