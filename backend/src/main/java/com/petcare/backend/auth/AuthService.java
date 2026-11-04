@@ -26,6 +26,7 @@ public class AuthService {
     private final HouseholdMemberRepository householdMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptService loginAttemptService;
 
     // Hash de relleno (Argon2id): si el correo no existe igual se verifica una contraseña,
     // así el tiempo de respuesta no delata qué correos están registrados
@@ -35,12 +36,14 @@ public class AuthService {
                        HouseholdRepository householdRepository,
                        HouseholdMemberRepository householdMemberRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.householdRepository = householdRepository;
         this.householdMemberRepository = householdMemberRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginAttemptService = loginAttemptService;
         this.dummyPasswordHash = passwordEncoder.encode("petcare-dummy-password");
     }
 
@@ -78,18 +81,28 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(normalizeEmail(request.email())).orElse(null);
+        String email = normalizeEmail(request.email());
 
-        // Mismo error en todos los casos para no revelar si el correo existe
+        // Se revisa antes de verificar la contraseña: bloqueado, ni la contraseña correcta entra
+        loginAttemptService.checkAllowed(email);
+
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        // Mismo error en todos los casos para no revelar si el correo existe.
+        // Los correos inexistentes también cuentan como fallo (si no, el límite delataría cuáles existen).
         if (user == null) {
             passwordEncoder.matches(request.password(), dummyPasswordHash);
+            loginAttemptService.recordFailure(email);
             throw new InvalidCredentialsException();
         }
 
         boolean passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
         if (!passwordMatches || user.getStatus() != UserStatus.ACTIVE) {
+            loginAttemptService.recordFailure(email);
             throw new InvalidCredentialsException();
         }
+
+        loginAttemptService.recordSuccess(email);
 
         // Rehash on login: solo aquí conocemos la contraseña en texto plano y ya está verificada.
         // Convierte hashes BCrypt antiguos (o Argon2 con parámetros viejos) al algoritmo actual.

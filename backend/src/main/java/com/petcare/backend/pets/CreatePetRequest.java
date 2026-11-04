@@ -6,7 +6,7 @@ import java.time.LocalDate;
 
 public record CreatePetRequest(
 
-        @NotNull(message = "El hogar es obligatorio")
+        // Opcional: si no se envía, la mascota se crea en el hogar del que el usuario es OWNER
         Long householdId,
 
         @NotBlank(message = "El nombre es obligatorio")

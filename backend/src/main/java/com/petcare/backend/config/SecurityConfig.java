@@ -13,6 +13,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +30,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
 @Configuration
 public class SecurityConfig {
@@ -40,23 +42,41 @@ public class SecurityConfig {
     private static final String UNAUTHORIZED_BODY =
             "{\"status\":401,\"message\":\"Debes iniciar sesión para acceder a este recurso\"}";
 
+    private static final String FORBIDDEN_BODY =
+            "{\"status\":403,\"message\":\"No tienes permisos para realizar esta acción\"}";
+
+    private static final String[] DOCS_PATHS = {"/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"};
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   @Value("${petcare.docs.enabled:false}") boolean docsEnabled)
+            throws Exception {
         http
                 // API con tokens Bearer: no hay cookies de sesión que un sitio externo pueda reutilizar
                 .csrf(csrf -> csrf.disable())
+                // Usa el bean corsConfigurationSource de CorsConfig (responde también a los preflight OPTIONS)
+                .cors(Customizer.withDefaults())
+                // Headers de seguridad por defecto de Spring Security: X-Content-Type-Options: nosniff,
+                // X-Frame-Options: DENY, Cache-Control: no-store, HSTS (solo en HTTPS) y X-XSS-Protection: 0
+                .headers(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
-                        // Spring reenvía aquí los errores internos; si no es público se verían como 401
-                        .requestMatchers("/error").permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+                            // Spring reenvía aquí los errores internos; si no es público se verían como 401
+                            .requestMatchers("/error").permitAll();
+                    // Swagger solo es público si la documentación está habilitada (en prod está apagada)
+                    if (docsEnabled) {
+                        auth.requestMatchers(DOCS_PATHS).permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> { })
                         .authenticationEntryPoint(unauthorizedEntryPoint()))
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(unauthorizedEntryPoint()));
+                        .authenticationEntryPoint(unauthorizedEntryPoint())
+                        .accessDeniedHandler(forbiddenHandler()));
 
         return http.build();
     }
@@ -106,6 +126,16 @@ public class SecurityConfig {
         return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+    }
+
+    // Denegaciones en la cadena de filtros (antes de llegar al controlador): 403 en JSON
+    private AccessDeniedHandler forbiddenHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.getWriter().write(FORBIDDEN_BODY);
+        };
     }
 
     private AuthenticationEntryPoint unauthorizedEntryPoint() {
