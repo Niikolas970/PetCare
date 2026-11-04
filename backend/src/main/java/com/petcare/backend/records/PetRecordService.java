@@ -17,6 +17,7 @@ import com.petcare.backend.records.RecordRequests.CreateTreatment;
 import com.petcare.backend.records.RecordRequests.CreateWeight;
 import com.petcare.backend.records.RecordRequests.CreateWellbeing;
 import com.petcare.backend.records.RecordRequests.DoseCreated;
+import com.petcare.backend.records.RecordRequests.DoseVoided;
 import com.petcare.backend.records.RecordRequests.VoidRecord;
 import com.petcare.backend.tasks.CareTask;
 import com.petcare.backend.tasks.CareTaskService;
@@ -117,9 +118,11 @@ public class PetRecordService {
         return new DoseCreated(dose, taskId);
     }
 
+    /** Anula la dosis y cancela su tarea de próxima dosis si sigue PENDING. */
     @Transactional
-    public PreventiveDose voidDose(Long petId, Long recordId, Long userId, VoidRecord request) {
-        return voidRecord(doseRepository, petId, recordId, userId, request);
+    public DoseVoided voidDose(Long petId, Long recordId, Long userId, VoidRecord request) {
+        PreventiveDose dose = voidRecord(doseRepository, petId, recordId, userId, request);
+        return new DoseVoided(dose, careTaskService.cancelPendingForDose(dose.getId()));
     }
 
     // ---------- Tratamientos ----------

@@ -12,6 +12,7 @@ import com.petcare.backend.records.RecordRequests.CreateTreatment;
 import com.petcare.backend.records.RecordRequests.CreateWeight;
 import com.petcare.backend.records.RecordRequests.CreateWellbeing;
 import com.petcare.backend.records.RecordRequests.DoseCreated;
+import com.petcare.backend.records.RecordRequests.DoseVoided;
 import com.petcare.backend.records.RecordRequests.VoidRecord;
 
 import jakarta.validation.Valid;
@@ -87,10 +88,10 @@ public class PetRecordController {
     }
 
     @Operation(summary = "Anular vacuna o desparasitación", description = VOID_DESCRIPTION
-            + " La tarea generada por la próxima dosis no se cancela sola.")
+            + " Su tarea de próxima dosis, si sigue PENDING, pasa a CANCELLED (cancelledTaskIds).")
     @PatchMapping("/doses/{id}/void")
-    public PreventiveDose voidDose(@PathVariable Long petId, @PathVariable Long id,
-                                   @Valid @RequestBody(required = false) VoidRecord request) {
+    public DoseVoided voidDose(@PathVariable Long petId, @PathVariable Long id,
+                               @Valid @RequestBody(required = false) VoidRecord request) {
         return recordService.voidDose(petId, id, currentUser.id(), request);
     }
 

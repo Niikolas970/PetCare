@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -34,6 +35,19 @@ public class HouseholdController {
     @GetMapping
     public List<HouseholdSummary> listMyHouseholds() {
         return householdService.listMine(currentUser.id());
+    }
+
+    @Operation(summary = "Crear hogar", description = "Quien lo crea queda como OWNER. timezone es opcional (America/Bogota).")
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public HouseholdSummary create(@Valid @RequestBody SaveHouseholdRequest request) {
+        return householdService.create(currentUser.id(), request);
+    }
+
+    @Operation(summary = "Editar hogar", description = "Nombre y zona horaria. Solo OWNER (403 para CAREGIVER); 400 si la zona no es válida.")
+    @PutMapping("/{id}")
+    public HouseholdSummary update(@PathVariable Long id, @Valid @RequestBody SaveHouseholdRequest request) {
+        return householdService.update(id, currentUser.id(), request);
     }
 
     @Operation(summary = "Listar miembros", description = "Miembros activos e invitados. Solo para miembros del hogar.")

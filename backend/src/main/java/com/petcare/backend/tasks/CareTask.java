@@ -23,6 +23,18 @@ public class CareTask {
     @Column(name = "pet_id", nullable = false, updatable = false)
     private Long petId;
 
+    // Dosis que generó la tarea (database/05_task_source.sql); null en tareas creadas a mano
+    @Column(name = "source_dose_id", updatable = false)
+    private Long sourceDoseId;
+
+    public Long getSourceDoseId() {
+        return sourceDoseId;
+    }
+
+    public void setSourceDoseId(Long sourceDoseId) {
+        this.sourceDoseId = sourceDoseId;
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CareTaskType type;

@@ -33,4 +33,6 @@ public interface CareTaskRepository extends JpaRepository<CareTask, Long> {
     Optional<CareTask> findFirstByPetIdAndStatusOrderByDueAtAsc(Long petId, CareTaskStatus status);
 
     List<CareTask> findTop10ByPetIdInOrderByCreatedAtDesc(Collection<Long> petIds);
+
+    List<CareTask> findBySourceDoseIdAndStatus(Long sourceDoseId, CareTaskStatus status);
 }

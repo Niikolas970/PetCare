@@ -141,8 +141,24 @@ public class CareTaskService {
         task.setDueAt(dose.getNextDueOn().atTime(GENERATED_TASK_TIME));
         task.setNotes("Generada automáticamente desde el registro del " + dose.getOccurredAt().toLocalDate());
         task.setCreatedBy(userId);
+        task.setSourceDoseId(dose.getId());
 
         return taskRepository.save(task);
+    }
+
+    /**
+     * Al anular una dosis, su tarea de próxima dosis deja de tener sentido: las PENDING pasan a CANCELLED.
+     * Las COMPLETED se conservan (ya ocurrieron). Devuelve los ids cancelados.
+     */
+    @Transactional
+    public List<Long> cancelPendingForDose(Long doseId) {
+        List<CareTask> pending = taskRepository.findBySourceDoseIdAndStatus(doseId, CareTaskStatus.PENDING);
+        pending.forEach(task -> {
+            task.setStatus(CareTaskStatus.CANCELLED);
+            task.setNotes(appendNote(task.getNotes(), "Cancelada automáticamente: se anuló la dosis que la generó."));
+        });
+        taskRepository.saveAll(pending);
+        return pending.stream().map(CareTask::getId).toList();
     }
 
     // ---------- Tareas del hogar ----------

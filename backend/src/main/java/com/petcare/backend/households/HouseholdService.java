@@ -1,11 +1,15 @@
 package com.petcare.backend.households;
 
+import java.time.DateTimeException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.petcare.backend.common.BadRequestException;
 import com.petcare.backend.common.BusinessRuleException;
 import com.petcare.backend.common.ResourceNotFoundException;
 import com.petcare.backend.pets.PetRepository;
@@ -127,9 +131,55 @@ public class HouseholdService {
         memberRepository.save(member);
     }
 
+    /** Crea un hogar nuevo: quien lo crea queda como OWNER ACTIVE. */
+    @Transactional
+    public HouseholdSummary create(Long userId, SaveHouseholdRequest request) {
+        Household household = new Household();
+        household.setName(request.name().trim());
+        household.setTimezone(request.timezone() == null || request.timezone().isBlank()
+                ? HouseholdClock.DEFAULT_ZONE.getId()
+                : validZone(request.timezone()));
+        household = householdRepository.save(household);
+
+        HouseholdMember owner = new HouseholdMember();
+        owner.setHouseholdId(household.getId());
+        owner.setUserId(userId);
+        owner.setRole(MemberRole.OWNER);
+        owner.setStatus(MemberStatus.ACTIVE);
+        owner.setJoinedAt(LocalDateTime.now());
+        memberRepository.save(owner);
+
+        return toSummary(household, MemberRole.OWNER);
+    }
+
+    /**
+     * Cambia nombre y zona horaria (solo OWNER). Las fechas ya guardadas no se convierten:
+     * se interpretan como hora local de la nueva zona.
+     */
+    @Transactional
+    public HouseholdSummary update(Long householdId, Long userId, SaveHouseholdRequest request) {
+        HouseholdMember member = accessService.requireOwner(householdId, userId);
+        Household household = householdRepository.findById(householdId)
+                .orElseThrow(() -> new ResourceNotFoundException(HouseholdAccessService.HOUSEHOLD_NOT_FOUND));
+
+        household.setName(request.name().trim());
+        if (request.timezone() != null && !request.timezone().isBlank()) {
+            household.setTimezone(validZone(request.timezone()));
+        }
+        return toSummary(householdRepository.save(household), member.getRole());
+    }
+
+    static String validZone(String timezone) {
+        try {
+            return ZoneId.of(timezone.trim()).getId();
+        } catch (DateTimeException ex) {
+            throw new BadRequestException("La zona horaria no es válida: '" + timezone.trim() + "'. Usa un nombre como America/Bogota.");
+        }
+    }
+
     private HouseholdSummary toSummary(Household household, MemberRole role) {
         long activePets = petRepository.countByHouseholdIdAndStatus(household.getId(), PetStatus.ACTIVE);
-        return new HouseholdSummary(household.getId(), household.getName(), role, activePets);
+        return new HouseholdSummary(household.getId(), household.getName(), household.getTimezone(), role, activePets);
     }
 
     private MemberResponse toMemberResponse(HouseholdMember member, User user) {

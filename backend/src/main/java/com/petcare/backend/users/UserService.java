@@ -16,6 +16,14 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
+    public UserResponse updateMe(Long userId, UpdateMeRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
+        user.setFullName(request.fullName().trim());
+        return UserResponse.of(userRepository.save(user));
+    }
+
     @Transactional(readOnly = true)
     public UserResponse getMe(Long userId) {
         return userRepository.findById(userId)

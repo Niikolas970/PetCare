@@ -260,6 +260,42 @@ class CareTaskServiceTest {
         assertThat(service.createForDose(pet, dose, USER).getType()).isEqualTo(CareTaskType.DEWORMING);
     }
 
+    @Test
+    @DisplayName("La tarea generada guarda la dosis de origen (source_dose_id)")
+    void generatedTaskRemembersItsDose() {
+        PreventiveDose dose = new PreventiveDose();
+        dose.setId(42L);
+        dose.setKind(DoseKind.VACCINE);
+        dose.setProductName("Rabia");
+        dose.setOccurredAt(NOW);
+        dose.setNextDueOn(LocalDate.of(2027, 11, 2));
+
+        assertThat(service.createForDose(pet, dose, USER).getSourceDoseId()).isEqualTo(42L);
+    }
+
+    @Test
+    @DisplayName("Anular una dosis cancela su tarea PENDING y deja nota; devuelve los ids cancelados")
+    void cancelPendingForDoseCancelsTheGeneratedTask() {
+        CareTask pending = task(7L, CareTaskStatus.PENDING, NOW.plusDays(30));
+        pending.setSourceDoseId(42L);
+        when(taskRepository.findBySourceDoseIdAndStatus(42L, CareTaskStatus.PENDING)).thenReturn(List.of(pending));
+
+        List<Long> cancelled = service.cancelPendingForDose(42L);
+
+        assertThat(cancelled).containsExactly(7L);
+        assertThat(pending.getStatus()).isEqualTo(CareTaskStatus.CANCELLED);
+        assertThat(pending.getNotes()).contains("se anuló la dosis");
+        verify(taskRepository).saveAll(List.of(pending));
+    }
+
+    @Test
+    @DisplayName("Sin tarea PENDING de esa dosis (ya hecha o creada antes del script) no se cancela nada")
+    void cancelPendingForDoseWithoutPendingTasks() {
+        when(taskRepository.findBySourceDoseIdAndStatus(42L, CareTaskStatus.PENDING)).thenReturn(List.of());
+
+        assertThat(service.cancelPendingForDose(42L)).isEmpty();
+    }
+
     private CareTask givenTask(Long id, CareTaskStatus status, LocalDateTime dueAt) {
         CareTask task = task(id, status, dueAt);
         when(taskRepository.findByIdAndPetId(id, PET)).thenReturn(Optional.of(task));

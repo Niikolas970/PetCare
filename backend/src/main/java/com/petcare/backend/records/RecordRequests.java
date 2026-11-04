@@ -121,6 +121,10 @@ public final class RecordRequests {
     public record DoseCreated(PreventiveDose dose, Long generatedTaskId) {
     }
 
+    // Dosis anulada y las tareas de próxima dosis que se cancelaron con ella
+    public record DoseVoided(PreventiveDose dose, java.util.List<Long> cancelledTaskIds) {
+    }
+
     // Cuerpo opcional de la anulación
     public record VoidRecord(
             @Size(max = 300, message = "El motivo no puede superar 300 caracteres")

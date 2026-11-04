@@ -1,4 +1,5 @@
 package com.petcare.backend.households;
 
-public record HouseholdSummary(Long id, String name, MemberRole myRole, long activePetsCount) {
+// timezone: zona IANA del hogar (p. ej. America/Bogota); las fechas del hogar se guardan en esa hora local
+public record HouseholdSummary(Long id, String name, String timezone, MemberRole myRole, long activePetsCount) {
 }
