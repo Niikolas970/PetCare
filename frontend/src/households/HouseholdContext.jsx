@@ -45,6 +45,8 @@ export function HouseholdProvider({ children }) {
       reload,
       // Rol del usuario en un hogar concreto (para la ficha de una mascota de otro hogar)
       roleIn: (householdId) => households?.find((h) => h.id === householdId)?.myRole ?? null,
+      // Zona horaria de un hogar (para "hoy" y "ahora"); America/Bogota si aún no se conoce
+      timezoneOf: (householdId) => households?.find((h) => h.id === householdId)?.timezone ?? 'America/Bogota',
     };
   }, [households, error, selectedId, setSelectedId, reload]);
 

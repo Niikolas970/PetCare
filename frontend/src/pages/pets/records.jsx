@@ -101,7 +101,7 @@ export function RecordList({ records, renderItem, empty, canVoid, onVoid, voidLa
 }
 
 /** Estado y diálogo para anular un registro de `kind`. */
-export function useVoid(petId, kind, { onDone, describe }) {
+export function useVoid(petId, kind, { onDone, describe, note }) {
   const [target, setTarget] = useState(null);
   const dialog = target && (
     <ConfirmDialog
@@ -112,15 +112,16 @@ export function useVoid(petId, kind, { onDone, describe }) {
       reasonLabel="Motivo (opcional)"
       onClose={() => setTarget(null)}
       onConfirm={async (reason) => {
-        await recordsApi.void(petId, kind, target.id, reason);
+        const result = await recordsApi.void(petId, kind, target.id, reason);
         setTarget(null);
-        onDone(target);
+        onDone(target, result);
       }}
     >
       <p>
         Vas a anular <strong>{describe(target)}</strong>. No se borra: queda en el historial como anulado y deja de contar
         en los resúmenes.
       </p>
+      {note && note(target) && <p className="confirm-note">{note(target)}</p>}
     </ConfirmDialog>
   );
   return { askVoid: setTarget, dialog };

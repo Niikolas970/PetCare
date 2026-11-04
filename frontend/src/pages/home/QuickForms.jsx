@@ -90,12 +90,13 @@ export function WeightForm({ open, pets, onClose, onDone }) {
   );
 }
 
-export function TaskForm({ open, pets, today, onClose, onDone }) {
+/** defaultDate (YYYY-MM-DD) y defaultPetId preseleccionan día y mascota (calendario). */
+export function TaskForm({ open, pets, today, defaultDate, defaultPetId, onClose, onDone }) {
   const [values, setValues] = useState({
-    petId: pets[0]?.id ?? '',
+    petId: defaultPetId ?? pets[0]?.id ?? '',
     type: 'VET_APPOINTMENT',
     title: '',
-    dueAt: defaultDueAt(today),
+    dueAt: defaultDate ? `${defaultDate}T09:00` : defaultDueAt(today),
     location: '',
   });
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }));

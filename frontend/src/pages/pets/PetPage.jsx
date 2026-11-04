@@ -12,7 +12,7 @@ import Tabs from '../../components/Tabs.jsx';
 import Toast from '../../components/Toast.jsx';
 import { useHouseholds } from '../../households/HouseholdContext.jsx';
 import { SEX, label } from '../../i18n/labels.js';
-import { formatKg, localToday, petAge } from '../careFormat.js';
+import { formatKg, petAge, todayIn } from '../careFormat.js';
 import PetFormDialog from './PetFormDialog.jsx';
 import { CareTab, FeedingTab, HealthTab, PET_TABS, SummaryTab, WeightTab, WellbeingTab } from './PetTabs.jsx';
 
@@ -31,13 +31,12 @@ export default function PetPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const { roleIn, reload: reloadHouseholds } = useHouseholds();
+  const { roleIn, timezoneOf, reload: reloadHouseholds } = useHouseholds();
   const [pet, setPet] = useState(null);
   const [error, setError] = useState(null);
   const [version, setVersion] = useState(0);
   const [dialog, setDialog] = useState(null); // 'edit' | 'archive' | 'restore'
   const [notice, setNotice] = useState(() => (location.state?.notice ? { id: 1, text: location.state.notice, tone: 'ok' } : null));
-  const today = localToday();
 
   const tab = PANELS[params.get('tab')] ? params.get('tab') : 'resumen';
   const goTo = useCallback((t) => setParams({ tab: t }, { replace: true }), [setParams]);
@@ -72,6 +71,9 @@ export default function PetPage() {
   if (!pet) return <Loader block text="Cargando la ficha…" />;
 
   const role = roleIn(pet.householdId);
+  const tz = timezoneOf(pet.householdId);
+  const today = todayIn(tz); // fechas relativas con la zona del hogar, no la del navegador
+  const petTz = { ...pet, tz };
   const isOwner = role === 'OWNER';
   const archived = pet.status === 'ARCHIVED';
   const canWrite = !archived; // OWNER y CAREGIVER registran; una archivada no admite registros (409)
@@ -128,13 +130,13 @@ export default function PetPage() {
 
       <Tabs tabs={PET_TABS} active={tab} onChange={goTo} label={`Secciones de ${pet.name}`} />
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="tab-panel" key={tab}>
-        <Panel pet={pet} today={today} canWrite={canWrite} canVoid={canVoid} onNotice={showNotice} onPetChanged={reloadPet} goTo={goTo} />
+        <Panel pet={petTz} today={today} canWrite={canWrite} canVoid={canVoid} onNotice={showNotice} onPetChanged={reloadPet} goTo={goTo} />
       </div>
 
       {dialog === 'edit' && (
         <PetFormDialog
           open
-          pet={pet}
+          pet={petTz}
           today={today}
           onClose={() => setDialog(null)}
           onDone={(updated) => {

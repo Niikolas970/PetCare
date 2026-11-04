@@ -9,7 +9,7 @@ import Loader from '../../components/Loader.jsx';
 import PetCard from '../../components/PetCard.jsx';
 import Select from '../../components/Select.jsx';
 import { useHouseholds } from '../../households/HouseholdContext.jsx';
-import { localToday } from '../careFormat.js';
+import { todayIn } from '../careFormat.js';
 import PetFormDialog from './PetFormDialog.jsx';
 
 const FILTERS = [
@@ -27,7 +27,7 @@ export default function PetsPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState('ACTIVE');
   const [query, setQuery] = useState('');
-  const [state, setState] = useState({ pets: null, today: localToday(), error: null });
+  const [state, setState] = useState({ pets: null, today: null, error: null });
   const [version, setVersion] = useState(0);
   const [adding, setAdding] = useState(false);
 
@@ -43,11 +43,12 @@ export default function PetsPage() {
             const cards = new Map(dash.pets.map((c) => [c.id, c]));
             return { pets: pets.map((p) => ({ ...p, ...cards.get(p.id) })), today: dash.today };
           })
-        : petsApi.list(selectedId, signal, 'ARCHIVED').then((pets) => ({ pets, today: localToday() }));
+        : petsApi.list(selectedId, signal, 'ARCHIVED').then((pets) => ({ pets, today: todayIn(current?.timezone) }));
     load
       .then(({ pets, today }) => setState({ pets, today, error: null }))
       .catch((error) => error.name !== 'AbortError' && setState((s) => ({ ...s, error })));
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, status, version]);
 
   const visible = useMemo(() => {
@@ -177,7 +178,7 @@ export default function PetsPage() {
         <PetFormDialog
           open
           householdId={selectedId}
-          today={state.today}
+          today={state.today ?? todayIn(current?.timezone)}
           onClose={() => setAdding(false)}
           onDone={(pet) => {
             setAdding(false);

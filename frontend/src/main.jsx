@@ -8,6 +8,7 @@ import './styles/base.css';
 import './styles/components.css';
 import './styles/pages.css';
 import './styles/pets.css';
+import './styles/sections.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

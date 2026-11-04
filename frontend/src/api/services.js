@@ -15,13 +15,32 @@ export const authApi = {
 export const usersApi = {
   // GET /api/users/me -> {id, fullName, email}
   me: (signal) => request('/api/users/me', { signal }),
+  // PUT /api/users/me {fullName} -> {id, fullName, email}
+  updateMe: (fullName) => request('/api/users/me', { method: 'PUT', body: { fullName } }),
 };
 
 export const householdsApi = {
-  // GET /api/households -> [{id, name, myRole, activePetsCount}]
+  // GET /api/households -> [{id, name, timezone, myRole, activePetsCount}]
   listMine: (signal) => request('/api/households', { signal }),
+  // POST /api/households {name, timezone} -> HouseholdSummary (quien crea queda OWNER)
+  create: ({ name, timezone }) => request('/api/households', { method: 'POST', body: { name, timezone } }),
+  // PUT /api/households/{id} {name, timezone} (solo OWNER)
+  update: (id, { name, timezone }) => request(`/api/households/${id}`, { method: 'PUT', body: { name, timezone } }),
   // GET /api/households/{id}/members -> [{userId, fullName, email, role, status, joinedAt}]
   members: (householdId, signal) => request(`/api/households/${householdId}/members`, { signal }),
+  // POST /api/households/{id}/invitations {email} (solo OWNER) -> MemberResponse INVITED
+  invite: (householdId, email) => request(`/api/households/${householdId}/invitations`, { method: 'POST', body: { email } }),
+  // DELETE /api/households/{id}/members/{userId} (solo OWNER): quita un miembro o cancela una invitación
+  removeMember: (householdId, userId) => request(`/api/households/${householdId}/members/${userId}`, { method: 'DELETE' }),
+};
+
+export const invitationsApi = {
+  // GET /api/invitations -> [{householdId, householdName, role, invitedByName}]
+  listMine: (signal) => request('/api/invitations', { signal }),
+  // POST /api/invitations/{householdId}/accept -> HouseholdSummary
+  accept: (householdId) => request(`/api/invitations/${householdId}/accept`, { method: 'POST' }),
+  // POST /api/invitations/{householdId}/decline -> 204
+  decline: (householdId) => request(`/api/invitations/${householdId}/decline`, { method: 'POST' }),
 };
 
 export const dashboardApi = {

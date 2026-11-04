@@ -90,7 +90,7 @@ export default function HomePage() {
     <div className="home">
       <header className="home-greeting">
         <h1 className="home-title">
-          {greeting()}
+          {greeting(data?.dashboard.timezone)}
           {name ? `, ${name}` : ''}
         </h1>
         <p className="home-date">

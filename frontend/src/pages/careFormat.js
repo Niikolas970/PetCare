@@ -126,8 +126,8 @@ export function speciesKind(species = '') {
   return 'other';
 }
 
-export function greeting(date = new Date()) {
-  const h = date.getHours();
+export function greeting(tz) {
+  const h = hourIn(tz);
   if (h < 12) return 'Buenos días';
   if (h < 19) return 'Buenas tardes';
   return 'Buenas noches';
@@ -146,16 +146,56 @@ export function plural(n, one, many) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
-/** Fecha local del navegador "YYYY-MM-DD" (cuando no se tiene la fecha del hogar). */
-export function localToday() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// ---------- Zona horaria del hogar ----------
+// El backend guarda fechas en la hora local del hogar (households.timezone). "Hoy" y "ahora"
+// se calculan en esa zona con Intl, no con la del navegador.
+
+const partsCache = new Map();
+function partsIn(tz, date = new Date()) {
+  const zone = tz || 'America/Bogota';
+  let fmt = partsCache.get(zone);
+  if (!fmt) {
+    try {
+      fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: zone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      });
+    } catch {
+      fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    }
+    partsCache.set(zone, fmt);
+  }
+  return Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
 }
 
-/** "YYYY-MM-DDTHH:mm" local del navegador, para limitar <input type="datetime-local"> a "ahora". */
-export function localNow() {
-  const d = new Date();
-  return `${localToday()}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+/** "YYYY-MM-DD" de hoy en la zona del hogar. */
+export function todayIn(tz) {
+  const p = partsIn(tz);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** "YYYY-MM-DDTHH:mm" de ahora en la zona del hogar (para <input type="datetime-local">). */
+export function nowIn(tz) {
+  const p = partsIn(tz);
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+export function hourIn(tz) {
+  return Number(partsIn(tz).hour);
+}
+
+/** Zonas horarias que conoce el navegador (para el selector del hogar). */
+export function timeZones() {
+  try {
+    return Intl.supportedValuesOf('timeZone');
+  } catch {
+    return ['America/Bogota', 'America/Mexico_City', 'America/Lima', 'America/Santiago', 'America/Argentina/Buenos_Aires', 'Europe/Madrid', 'UTC'];
+  }
 }
 
 /** Valor para <input type="datetime-local">: mañana a las 9:00 en la fecha del hogar. */

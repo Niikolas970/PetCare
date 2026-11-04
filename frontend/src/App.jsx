@@ -8,7 +8,8 @@ import PetPage from './pages/pets/PetPage.jsx';
 import PetsPage from './pages/pets/PetsPage.jsx';
 import { HouseholdProvider } from './households/HouseholdContext.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
-import ComingSoonPage from './pages/ComingSoonPage.jsx';
+import CalendarPage from './pages/CalendarPage.jsx';
+import HouseholdPage from './pages/HouseholdPage.jsx';
 
 export default function App() {
   return (
@@ -29,8 +30,8 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="mascotas" element={<PetsPage />} />
           <Route path="mascotas/:id" element={<PetPage />} />
-          <Route path="calendario" element={<ComingSoonPage title="Calendario" />} />
-          <Route path="hogar" element={<ComingSoonPage title="Hogar" />} />
+          <Route path="calendario" element={<CalendarPage />} />
+          <Route path="hogar" element={<HouseholdPage />} />
           <Route path="perfil" element={<ProfilePage />} />
         </Route>
       </Route>

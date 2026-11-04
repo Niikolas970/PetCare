@@ -77,6 +77,13 @@ export const LEVEL = {
   HIGH: 'Alto',
 };
 
+// Para "energía" (femenino): "energía alta". Para "apetito" se usa LEVEL: "apetito alto".
+export const LEVEL_FEMININE = {
+  LOW: 'Baja',
+  NORMAL: 'Normal',
+  HIGH: 'Alta',
+};
+
 export const RECORD_STATUS = {
   ACTIVE: 'Activo',
   VOIDED: 'Anulado',

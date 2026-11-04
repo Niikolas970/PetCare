@@ -4,8 +4,8 @@ import FormModal from '../../components/FormModal.jsx';
 import Input from '../../components/Input.jsx';
 import Select from '../../components/Select.jsx';
 import Textarea from '../../components/Textarea.jsx';
-import { CARE_TASK_TYPE, DOSE_KIND, HEALTH_RECORD_TYPE, LEVEL, MOOD } from '../../i18n/labels.js';
-import { addDays, defaultDueAt, localNow, localToday } from '../careFormat.js';
+import { CARE_TASK_TYPE, DOSE_KIND, HEALTH_RECORD_TYPE, LEVEL, LEVEL_FEMININE, MOOD } from '../../i18n/labels.js';
+import { addDays, defaultDueAt, nowIn, todayIn } from '../careFormat.js';
 
 // ---------- Utilidades comunes ----------
 
@@ -13,8 +13,8 @@ const max = (v, n, msg) => (v && v.trim().length > n ? msg : null);
 const clean = (v) => (v && v.trim() ? v.trim() : null);
 const toNumber = (v) => Number(String(v).replace(',', '.'));
 
-function occurredError(v) {
-  if (v && v > localNow()) return 'La fecha del registro no puede ser futura';
+function occurredError(v, tz) {
+  if (v && v > nowIn(tz)) return 'La fecha del registro no puede ser futura';
   return null;
 }
 
@@ -22,12 +22,12 @@ function compact(errors) {
   return Object.fromEntries(Object.entries(errors).filter(([, v]) => v));
 }
 
-function OccurredAt({ value, onChange, error, label = 'Fecha y hora (opcional)' }) {
+function OccurredAt({ value, onChange, error, tz, label = 'Fecha y hora (opcional)' }) {
   return (
     <Input
       label={label}
       type="datetime-local"
-      max={localNow()}
+      max={nowIn(tz)}
       value={value}
       onChange={onChange}
       error={error}
@@ -55,7 +55,7 @@ function options(map) {
 /** POST /api/pets/{petId}/doses {kind, productName, occurredAt, nextDueOn, notes} */
 export function DoseForm({ pet, onClose, onDone }) {
   const [v, set] = useValues({ kind: 'VACCINE', productName: '', occurredAt: '', nextDueOn: '', notes: '' });
-  const applied = (v.occurredAt || localNow()).slice(0, 10);
+  const applied = (v.occurredAt || nowIn(pet.tz)).slice(0, 10);
   return (
     <FormModal
       open
@@ -67,7 +67,7 @@ export function DoseForm({ pet, onClose, onDone }) {
       validate={(x) =>
         compact({
           productName: !x.productName.trim() ? 'El producto es obligatorio' : max(x.productName, 120, 'El producto no puede superar 120 caracteres'),
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           nextDueOn: x.nextDueOn && x.nextDueOn <= applied ? 'La próxima dosis debe ser posterior a la fecha de aplicación' : null,
           notes: max(x.notes, 2000, 'Las notas no pueden superar 2000 caracteres'),
         })
@@ -93,7 +93,7 @@ export function DoseForm({ pet, onClose, onDone }) {
             {options(DOSE_KIND)}
           </Select>
           <Input label="Producto" value={v.productName} onChange={set('productName')} error={e.productName} placeholder="Rabia, Nobivac, Drontal…" maxLength={120} />
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} label="Fecha de aplicación (opcional)" />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} label="Fecha de aplicación (opcional)" />
           <Input
             label="Próxima dosis (opcional)"
             type="date"
@@ -113,7 +113,7 @@ export function DoseForm({ pet, onClose, onDone }) {
 /** POST /api/pets/{petId}/treatments {medication, dosage, frequency, occurredAt, endsOn, notes} */
 export function TreatmentForm({ pet, onClose, onDone }) {
   const [v, set] = useValues({ medication: '', dosage: '', frequency: '', occurredAt: '', endsOn: '', notes: '' });
-  const start = (v.occurredAt || localNow()).slice(0, 10);
+  const start = (v.occurredAt || nowIn(pet.tz)).slice(0, 10);
   return (
     <FormModal
       open
@@ -127,7 +127,7 @@ export function TreatmentForm({ pet, onClose, onDone }) {
           medication: !x.medication.trim() ? 'El medicamento es obligatorio' : max(x.medication, 120, 'El medicamento no puede superar 120 caracteres'),
           dosage: max(x.dosage, 80, 'La dosis no puede superar 80 caracteres'),
           frequency: max(x.frequency, 80, 'La frecuencia no puede superar 80 caracteres'),
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           endsOn: x.endsOn && x.endsOn < start ? 'La fecha de fin no puede ser anterior al inicio del tratamiento' : null,
           notes: max(x.notes, 2000, 'Las notas no pueden superar 2000 caracteres'),
         })
@@ -151,7 +151,7 @@ export function TreatmentForm({ pet, onClose, onDone }) {
             <Input label="Dosis (opcional)" value={v.dosage} onChange={set('dosage')} error={e.dosage} placeholder="5 ml" maxLength={80} />
             <Input label="Frecuencia (opcional)" value={v.frequency} onChange={set('frequency')} error={e.frequency} placeholder="Cada 12 horas" maxLength={80} />
           </div>
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} label="Inicio (opcional)" />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} label="Inicio (opcional)" />
           <Input label="Termina el (opcional)" type="date" min={start} value={v.endsOn} onChange={set('endsOn')} error={e.endsOn} />
           <Textarea label="Notas (opcional)" value={v.notes} onChange={set('notes')} error={e.notes} maxLength={2000} />
         </>
@@ -175,7 +175,7 @@ export function HealthRecordForm({ pet, onClose, onDone }) {
         compact({
           title: !x.title.trim() ? 'El título es obligatorio' : max(x.title, 150, 'El título no puede superar 150 caracteres'),
           veterinarian: max(x.veterinarian, 120, 'El veterinario no puede superar 120 caracteres'),
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           description: max(x.description, 5000, 'La descripción no puede superar 5000 caracteres'),
         })
       }
@@ -197,7 +197,7 @@ export function HealthRecordForm({ pet, onClose, onDone }) {
           </Select>
           <Input label="Título" value={v.title} onChange={set('title')} error={e.title} placeholder="Control anual" maxLength={150} />
           <Input label="Veterinario (opcional)" value={v.veterinarian} onChange={set('veterinarian')} error={e.veterinarian} maxLength={120} />
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
           <Textarea label="Descripción (opcional)" value={v.description} onChange={set('description')} error={e.description} maxLength={5000} />
         </>
       )}
@@ -222,7 +222,7 @@ export function PetMealForm({ pet, onClose, onDone }) {
         compact({
           food: !x.food.trim() ? 'El alimento es obligatorio' : max(x.food, 120, 'El alimento no puede superar 120 caracteres'),
           quantity: max(x.quantity, 60, 'La cantidad no puede superar 60 caracteres'),
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           notes: max(x.notes, 2000, 'Las notas no pueden superar 2000 caracteres'),
         })
       }
@@ -240,7 +240,7 @@ export function PetMealForm({ pet, onClose, onDone }) {
         <>
           <Input label="Alimento" value={v.food} onChange={set('food')} error={e.food} placeholder="Concentrado de cordero" maxLength={120} />
           <Input label="Cantidad (opcional)" value={v.quantity} onChange={set('quantity')} error={e.quantity} placeholder="1 taza" maxLength={60} />
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
           <Textarea label="Notas (opcional)" value={v.notes} onChange={set('notes')} error={e.notes} maxLength={2000} />
         </>
       )}
@@ -270,7 +270,7 @@ export function PetWeightForm({ pet, onClose, onDone }) {
               : !/^\d{1,4}([.,]\d{1,3})?$/.test(raw)
                 ? 'El peso tiene un formato inválido'
                 : null,
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           notes: max(x.notes, 2000, 'Las notas no pueden superar 2000 caracteres'),
         });
       }}
@@ -282,7 +282,7 @@ export function PetWeightForm({ pet, onClose, onDone }) {
       {(e) => (
         <>
           <Input label="Peso en kg" inputMode="decimal" value={v.weightKg} onChange={set('weightKg')} error={e.weightKg} placeholder="12,5" />
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
           <Textarea label="Notas (opcional)" value={v.notes} onChange={set('notes')} error={e.notes} maxLength={2000} />
         </>
       )}
@@ -304,7 +304,7 @@ export function WellbeingForm({ pet, onClose, onDone }) {
       validate={(x) =>
         compact({
           mood: !x.mood ? 'El ánimo es obligatorio' : null,
-          occurredAt: occurredError(x.occurredAt),
+          occurredAt: occurredError(x.occurredAt, pet.tz),
           notes: max(x.notes, 2000, 'Las notas no pueden superar 2000 caracteres'),
         })
       }
@@ -340,14 +340,14 @@ export function WellbeingForm({ pet, onClose, onDone }) {
           <div className="form-row">
             <Select label="Energía (opcional)" value={v.energy} onChange={set('energy')}>
               <option value="">Sin indicar</option>
-              {options(LEVEL)}
+              {options(LEVEL_FEMININE)}
             </Select>
             <Select label="Apetito (opcional)" value={v.appetite} onChange={set('appetite')}>
               <option value="">Sin indicar</option>
               {options(LEVEL)}
             </Select>
           </div>
-          <OccurredAt value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
+          <OccurredAt tz={pet.tz} value={v.occurredAt} onChange={set('occurredAt')} error={e.occurredAt} />
           <Textarea label="Comportamiento y notas (opcional)" value={v.notes} onChange={set('notes')} error={e.notes} maxLength={2000} />
         </>
       )}
@@ -359,7 +359,7 @@ export function WellbeingForm({ pet, onClose, onDone }) {
 
 /** POST /api/pets/{petId}/tasks {type, title, dueAt, location, notes} */
 export function PetTaskForm({ pet, onClose, onDone }) {
-  const [v, set] = useValues({ type: 'VET_APPOINTMENT', title: '', dueAt: defaultDueAt(localToday()), location: '', notes: '' });
+  const [v, set] = useValues({ type: 'VET_APPOINTMENT', title: '', dueAt: defaultDueAt(todayIn(pet.tz)), location: '', notes: '' });
   return (
     <FormModal
       open

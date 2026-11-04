@@ -67,9 +67,16 @@ export function AuthProvider({ children }) {
     [login],
   );
 
+  // PUT /api/users/me: el nombre nuevo se refleja en el saludo y en el bloque de usuario
+  const updateName = useCallback(async (fullName) => {
+    const updated = await usersApi.updateMe(fullName);
+    setUser(updated);
+    return updated;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: Boolean(token), login, register, logout }),
-    [user, token, login, register, logout],
+    () => ({ user, isAuthenticated: Boolean(token), login, register, logout, updateName }),
+    [user, token, login, register, logout, updateName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

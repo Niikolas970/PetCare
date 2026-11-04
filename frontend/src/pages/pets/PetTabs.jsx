@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { petsApi, tasksApi } from '../../api/services.js';
+import { recordsApi, tasksApi } from '../../api/services.js';
 import Button from '../../components/Button.jsx';
 import Chip from '../../components/Chip.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 import ErrorMessage from '../../components/ErrorMessage.jsx';
 import Icon from '../../components/Icon.jsx';
 import Loader from '../../components/Loader.jsx';
-import { CARE_TASK_TYPE, DOSE_KIND, HEALTH_RECORD_TYPE, LEVEL, MOOD, TIMELINE_TYPE, label } from '../../i18n/labels.js';
+import { CARE_TASK_TYPE, DOSE_KIND, HEALTH_RECORD_TYPE, LEVEL, LEVEL_FEMININE, MOOD, label } from '../../i18n/labels.js';
 import { dayDiff, dueLabel, formatKg, taskStyle } from '../careFormat.js';
 import {
   DoseForm,
@@ -175,25 +175,99 @@ export function CareTab({ pet, today, canWrite, onNotice }) {
 
 // ---------- Resumen ----------
 
-const RECORD_TYPES = 'HEALTH,VACCINE,DEWORMING,TREATMENT,MEAL,WEIGHT,WELLBEING';
-const TIMELINE_TAB = { HEALTH: 'salud', VACCINE: 'salud', DEWORMING: 'salud', TREATMENT: 'salud', MEAL: 'alimentacion', WEIGHT: 'peso', WELLBEING: 'bienestar' };
+// Últimos registros armados en el frontend con los datos estructurados de cada tipo y labels.js
+const SUMMARY_SOURCES = [
+  {
+    kind: 'weights',
+    tab: 'peso',
+    chip: 'Peso',
+    toEntry: (w) => ({ title: `Peso: ${formatKg(w.weightKg)}`, details: [w.notes] }),
+  },
+  {
+    kind: 'meals',
+    tab: 'alimentacion',
+    chip: 'Comida',
+    toEntry: (m) => ({ title: `Comida: ${m.food}`, details: [m.quantity && `Cantidad: ${m.quantity}`, m.notes] }),
+  },
+  {
+    kind: 'wellbeing',
+    tab: 'bienestar',
+    chip: 'Bienestar',
+    toEntry: (l) => ({
+      title: `Ánimo: ${label(MOOD, l.mood).toLowerCase()}`,
+      details: [
+        [l.energy && `energía ${label(LEVEL_FEMININE, l.energy).toLowerCase()}`, l.appetite && `apetito ${label(LEVEL, l.appetite).toLowerCase()}`]
+          .filter(Boolean)
+          .join(', ')
+          .replace(/^./, (c) => c.toUpperCase()),
+        l.notes,
+      ],
+    }),
+  },
+  {
+    kind: 'doses',
+    tab: 'salud',
+    chip: 'Salud',
+    toEntry: (d) => ({
+      title: `${label(DOSE_KIND, d.kind)}: ${d.productName}`,
+      details: [d.nextDueOn && `Próxima dosis: ${formatDate(d.nextDueOn)}`],
+    }),
+  },
+  {
+    kind: 'treatments',
+    tab: 'salud',
+    chip: 'Salud',
+    toEntry: (t) => ({
+      title: `Tratamiento: ${t.medication}`,
+      details: [[t.dosage, t.frequency].filter(Boolean).join(', '), t.endsOn && `Hasta el ${formatDate(t.endsOn)}`],
+    }),
+  },
+  {
+    kind: 'health-records',
+    tab: 'salud',
+    chip: 'Salud',
+    toEntry: (h) => ({
+      title: `${label(HEALTH_RECORD_TYPE, h.recordType)}: ${h.title}`,
+      details: [h.veterinarian && `Atendió: ${h.veterinarian}`],
+    }),
+  },
+];
+
+function useLatestRecords(petId, limit = 6) {
+  const [state, setState] = useState({ items: null, error: null });
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all(SUMMARY_SOURCES.map((s) => recordsApi.list(petId, s.kind, false, controller.signal)))
+      .then((lists) => {
+        const items = lists
+          .flatMap((list, i) =>
+            list.map((r) => {
+              const source = SUMMARY_SOURCES[i];
+              const entry = source.toEntry(r);
+              return {
+                key: `${source.kind}-${r.id}`,
+                date: r.occurredAt,
+                tab: source.tab,
+                chip: source.chip,
+                title: entry.title,
+                details: entry.details.filter(Boolean),
+              };
+            }),
+          )
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .slice(0, limit);
+        setState({ items, error: null });
+      })
+      .catch((error) => error.name !== 'AbortError' && setState({ items: null, error }));
+    return () => controller.abort();
+  }, [petId, limit]);
+  return state;
+}
 
 export function SummaryTab({ pet, today, onNotice, goTo }) {
   const tasks = usePetTasks(pet.id, 'PENDING');
   const { states, complete } = useComplete(onNotice, tasks.reload);
-  const [timeline, setTimeline] = useState({ items: null, error: null });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    petsApi
-      .timeline(pet.id, RECORD_TYPES, controller.signal)
-      .then((items) =>
-        setTimeline({ items: [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), error: null }),
-      )
-      .catch((error) => error.name !== 'AbortError' && setTimeline({ items: null, error }));
-    return () => controller.abort();
-  }, [pet.id]);
-
+  const latest = useLatestRecords(pet.id);
   const upcoming = tasks.items?.slice(0, 3);
 
   return (
@@ -231,28 +305,31 @@ export function SummaryTab({ pet, today, onNotice, goTo }) {
 
       <section className="tab-section" aria-labelledby="sum-records-title">
         <SectionHead id="sum-records-title" title="Últimos registros" />
-        {timeline.error && <ErrorMessage>{timeline.error.message}</ErrorMessage>}
-        {!timeline.error && !timeline.items && <Loader text="Cargando…" />}
-        {timeline.items && timeline.items.length === 0 && (
+        {latest.error && <ErrorMessage>{latest.error.message}</ErrorMessage>}
+        {!latest.error && !latest.items && <Loader text="Cargando…" />}
+        {latest.items && latest.items.length === 0 && (
           <div className="panel">
             <EmptyRecords title="Todavía no hay registros" actionLabel="Registrar peso" onAction={() => goTo('peso')}>
               Lo que registres en Salud, Alimentación, Peso o Bienestar aparecerá aquí.
             </EmptyRecords>
           </div>
         )}
-        {timeline.items && timeline.items.length > 0 && (
+        {latest.items && latest.items.length > 0 && (
           <ul className="record-list">
-            {timeline.items.map((item) => (
-              <li key={`${item.type}-${item.id}`} className="record">
+            {latest.items.map((item) => (
+              <li key={item.key} className="record">
                 <div className="record-body">
-                  {/* El backend arma el texto con punto decimal ("3.7 kg"); en es-CO va con coma */}
-                  <p className="record-title">{item.title.replace(/(\d)\.(\d)/g, '$1,$2')}</p>
+                  <p className="record-title">{item.title}</p>
                   <p className="record-meta">{formatWhen(item.date)}</p>
-                  {item.summary && <p className="record-meta">{item.summary}</p>}
+                  {item.details.map((d) => (
+                    <p key={d} className="record-meta">
+                      {d}
+                    </p>
+                  ))}
                 </div>
                 <div className="record-side">
-                  <button type="button" className="chip chip-clay chip-link" onClick={() => goTo(TIMELINE_TAB[item.type])}>
-                    {label(TIMELINE_TYPE, item.type)}
+                  <button type="button" className="chip chip-clay chip-link" onClick={() => goTo(item.tab)}>
+                    {item.chip}
                     <span className="sr-only">: ver la pestaña</span>
                   </button>
                 </div>
@@ -289,7 +366,18 @@ export function HealthTab({ pet, today, canWrite, canVoid, onNotice }) {
   const treatments = useRecords(pet.id, 'treatments', showVoided);
   const events = useRecords(pet.id, 'health-records', showVoided);
   const voided = () => onNotice('Registro anulado. Sigue en el historial como anulado.');
-  const vDose = useVoid(pet.id, 'doses', { onDone: () => (doses.reload(), voided()), describe: (d) => `${DOSE_KIND[d.kind]}: ${d.productName}` });
+  const vDose = useVoid(pet.id, 'doses', {
+    describe: (d) => `${DOSE_KIND[d.kind]}: ${d.productName}`,
+    note: (d) => d.nextDueOn && `Si su cuidado de próxima dosis (${formatDate(d.nextDueOn)}) sigue pendiente, también se cancelará.`,
+    onDone: (d, res) => {
+      doses.reload();
+      onNotice(
+        res?.cancelledTaskIds?.length
+          ? 'Dosis anulada. Su cuidado de próxima dosis quedó cancelado.'
+          : 'Registro anulado. Sigue en el historial como anulado.',
+      );
+    },
+  });
   const vTreat = useVoid(pet.id, 'treatments', { onDone: () => (treatments.reload(), voided()), describe: (t) => `el tratamiento ${t.medication}` });
   const vEvent = useVoid(pet.id, 'health-records', { onDone: () => (events.reload(), voided()), describe: (h) => `«${h.title}»` });
 
@@ -552,7 +640,7 @@ export function WellbeingTab({ pet, canWrite, canVoid, onNotice }) {
             <p className="record-meta">{formatWhen(l.occurredAt)}</p>
             <div className="record-chips">
               <Chip tone={MOOD_TONE[l.mood]}>Ánimo: {label(MOOD, l.mood).toLowerCase()}</Chip>
-              {l.energy && <Chip tone="neutral">Energía: {label(LEVEL, l.energy).toLowerCase()}</Chip>}
+              {l.energy && <Chip tone="neutral">Energía: {label(LEVEL_FEMININE, l.energy).toLowerCase()}</Chip>}
               {l.appetite && <Chip tone="neutral">Apetito: {label(LEVEL, l.appetite).toLowerCase()}</Chip>}
             </div>
             {l.notes && <p className="record-notes">{l.notes}</p>}
