@@ -6,6 +6,7 @@ import java.net.URI;
 import java.util.List;
 
 import com.petcare.backend.common.CurrentUser;
+import com.petcare.backend.common.EnumParams;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -32,10 +33,13 @@ public class PetController {
         this.currentUser = currentUser;
     }
 
-    @Operation(summary = "Listar mascotas activas", description = "Mascotas ACTIVE de mis hogares; ?householdId= filtra por un hogar.")
+    @Operation(summary = "Listar mascotas",
+            description = "Mascotas de mis hogares; ?householdId= filtra por un hogar y ?status=ACTIVE (por defecto) o ARCHIVED.")
     @GetMapping
-    public List<Pet> listActivePets(@RequestParam(required = false) Long householdId) {
-        return petService.listActive(currentUser.id(), householdId);
+    public List<Pet> listPets(@RequestParam(required = false) Long householdId,
+                              @RequestParam(required = false) String status) {
+        PetStatus parsed = EnumParams.parse(PetStatus.class, status, "status");
+        return petService.list(currentUser.id(), householdId, parsed == null ? PetStatus.ACTIVE : parsed);
     }
 
     @Operation(summary = "Ver mascota", description = "404 si no existe o es de un hogar ajeno.")

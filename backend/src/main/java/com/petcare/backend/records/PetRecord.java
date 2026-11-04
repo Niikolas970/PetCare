@@ -40,6 +40,40 @@ public abstract class PetRecord {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // Trazabilidad de la anulación (database/04_void_records.sql)
+    @Column(name = "voided_by")
+    private Long voidedBy;
+
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
+    @Column(name = "void_reason", length = 300)
+    private String voidReason;
+
+    public Long getVoidedBy() {
+        return voidedBy;
+    }
+
+    public void setVoidedBy(Long voidedBy) {
+        this.voidedBy = voidedBy;
+    }
+
+    public LocalDateTime getVoidedAt() {
+        return voidedAt;
+    }
+
+    public void setVoidedAt(LocalDateTime voidedAt) {
+        this.voidedAt = voidedAt;
+    }
+
+    public String getVoidReason() {
+        return voidReason;
+    }
+
+    public void setVoidReason(String voidReason) {
+        this.voidReason = voidReason;
+    }
+
     public Long getId() {
         return id;
     }

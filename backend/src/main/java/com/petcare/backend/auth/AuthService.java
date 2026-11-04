@@ -65,7 +65,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         Household household = new Household();
-        household.setName("Hogar de " + fullName);
+        household.setName(defaultHouseholdName(fullName));
         household = householdRepository.save(household);
 
         HouseholdMember member = new HouseholdMember();
@@ -77,6 +77,19 @@ public class AuthService {
         householdMemberRepository.save(member);
 
         return new RegisteredUserResponse(user.getId(), user.getFullName(), user.getEmail(), household.getId());
+    }
+
+    // Columna households.name: VARCHAR(120)
+    static final int HOUSEHOLD_NAME_MAX = 120;
+
+    /**
+     * "Hogar de <primer nombre>". Solo se usa al registrarse; los hogares existentes no cambian.
+     * Se recorta a la longitud de la columna para nombres muy largos.
+     */
+    static String defaultHouseholdName(String fullName) {
+        String firstName = fullName.trim().split("\\s+")[0];
+        String name = "Hogar de " + firstName;
+        return name.length() <= HOUSEHOLD_NAME_MAX ? name : name.substring(0, HOUSEHOLD_NAME_MAX);
     }
 
     @Transactional

@@ -1154,6 +1154,100 @@
           "response": []
         },
         {
+          "name": "Listar mascotas archivadas del hogar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const pets = pm.response.json();",
+                  "",
+                  "pm.test(\"Incluye la mascota recién archivada\", function () {",
+                  "    pm.expect(pets.map(p => p.id)).to.include(Number(pm.collectionVariables.get(\"petId\")));",
+                  "});",
+                  "",
+                  "pm.test(\"Todas están ARCHIVED\", function () {",
+                  "    pets.forEach(p => pm.expect(p.status).to.eql(\"ARCHIVED\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets?householdId={{householdId}}&status=ARCHIVED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
+              ],
+              "query": [
+                {
+                  "key": "householdId",
+                  "value": "{{householdId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "ARCHIVED"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar mascotas con estado inválido (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"El mensaje indica el parámetro status y los valores permitidos\", function () {",
+                  "    const msg = pm.response.json().message;",
+                  "    pm.expect(msg).to.include(\"El parámetro status no es válido\");",
+                  "    pm.expect(msg).to.include(\"ACTIVE, ARCHIVED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets?status=BORRADA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "BORRADA"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Editar mascota archivada (debe fallar)",
           "event": [
             {
@@ -1484,7 +1578,7 @@
                   "",
                   "pm.test(\"Incluye el hogar creado en el registro\", function () {",
                   "    pm.expect(mine).to.not.be.undefined;",
-                  "    pm.expect(mine.name).to.eql(\"Hogar de Usuario de Prueba\");",
+                  "    pm.expect(mine.name).to.eql(\"Hogar de Usuario\");",
                   "});",
                   "",
                   "pm.test(\"Mi rol en ese hogar es OWNER\", function () {",
@@ -2820,6 +2914,491 @@
                   "});",
                   "",
                   "pm.test(\"weightKg es la medición más reciente\", function () {",
+                  "    pm.expect(pm.response.json().weightKg).to.eql(2.4);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar comida para anular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"voidMealId\", pm.response.json().id);",
+                  "",
+                  "pm.test(\"Nace ACTIVE y sin datos de anulación\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(\"ACTIVE\");",
+                  "    pm.expect(body.voidedBy).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"food\": \"Comida registrada por error\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Anular comida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Queda VOIDED, sin borrarse\", function () {",
+                  "    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"voidMealId\")));",
+                  "    pm.expect(body.status).to.eql(\"VOIDED\");",
+                  "});",
+                  "",
+                  "pm.test(\"Guarda quién, cuándo y por qué\", function () {",
+                  "    pm.expect(body.voidedBy).to.eql(Number(pm.collectionVariables.get(\"userAId\")));",
+                  "    pm.expect(body.voidedAt).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(body.voidReason).to.eql(\"Registrada por error\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/{{voidMealId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "{{voidMealId}}",
+                "void"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Registrada por error\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Anular comida ya anulada (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409 Conflict\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: El registro ya está anulado\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"El registro ya está anulado\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/{{voidMealId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "{{voidMealId}}",
+                "void"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar comidas no incluye la anulada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"La comida anulada no aparece y todas están ACTIVE\", function () {",
+                  "    const meals = pm.response.json();",
+                  "    pm.expect(meals.map(m => m.id)).to.not.include(Number(pm.collectionVariables.get(\"voidMealId\")));",
+                  "    meals.forEach(m => pm.expect(m.status).to.eql(\"ACTIVE\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar comidas con anuladas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Con includeVoided=true aparece la anulada con su estado\", function () {",
+                  "    const voided = pm.response.json().find(m => m.id === Number(pm.collectionVariables.get(\"voidMealId\")));",
+                  "    pm.expect(voided).to.not.be.undefined;",
+                  "    pm.expect(voided.status).to.eql(\"VOIDED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals?includeVoided=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals"
+              ],
+              "query": [
+                {
+                  "key": "includeVoided",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Anular con motivo demasiado largo (debe fallar)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"longReason\", \"x\".repeat(301));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Indica error en: reason\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.errors).to.have.property(\"reason\");",
+                  "    pm.expect(body.errors.reason).to.eql(\"El motivo no puede superar 300 caracteres\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/{{voidMealId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "{{voidMealId}}",
+                "void"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"{{longReason}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Anular registro inexistente (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: El registro no existe\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"El registro no existe\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/999999999/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "999999999",
+                "void"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Registrar peso para anular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"voidWeightId\", pm.response.json().id);",
+                  "",
+                  "pm.test(\"Guarda el peso\", function () {",
+                  "    pm.expect(pm.response.json().weightKg).to.eql(9.9);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/weights",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "weights"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightKg\": 9.9,\n  \"notes\": \"Báscula mal calibrada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Anular el último peso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"El peso queda VOIDED\", function () {",
+                  "    pm.expect(pm.response.json().status).to.eql(\"VOIDED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/weights/{{voidWeightId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "weights",
+                "{{voidWeightId}}",
+                "void"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Báscula mal calibrada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "El peso actual vuelve a la medición anterior",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"weightKg es la medición ACTIVE más reciente (2.4), no la anulada\", function () {",
                   "    pm.expect(pm.response.json().weightKg).to.eql(2.4);",
                   "});"
                 ]
@@ -5758,7 +6337,7 @@
                   "",
                   "pm.test(\"Incluye la invitación al hogar de A\", function () {",
                   "    pm.expect(invitation).to.not.be.undefined;",
-                  "    pm.expect(invitation.householdName).to.eql(\"Hogar de Usuario de Prueba\");",
+                  "    pm.expect(invitation.householdName).to.eql(\"Hogar de Usuario\");",
                   "    pm.expect(invitation.role).to.eql(\"CAREGIVER\");",
                   "});",
                   "",
@@ -6055,6 +6634,225 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"food\": \"Zanahoria\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B registra otra comida para anular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set(\"caregiverMealId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"food\": \"Galletas (por error)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B anula una comida (debe fallar, solo OWNER)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: No tienes permisos para realizar esta acción\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"No tienes permisos para realizar esta acción\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/{{caregiverMealId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "{{caregiverMealId}}",
+                "void"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "B ve las mascotas archivadas del hogar de A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Un CAREGIVER ve la mascota archivada del hogar\", function () {",
+                  "    pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.collectionVariables.get(\"secondPetId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets?householdId={{householdId}}&status=ARCHIVED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets"
+              ],
+              "query": [
+                {
+                  "key": "householdId",
+                  "value": "{{householdId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "ARCHIVED"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenB}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "A anula la comida registrada por B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"La anula el OWNER y queda su id en voidedBy\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(\"VOIDED\");",
+                  "    pm.expect(body.voidedBy).to.eql(Number(pm.collectionVariables.get(\"userAId\")));",
+                  "    pm.expect(body.createdBy).to.eql(Number(pm.collectionVariables.get(\"userBId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pets/{{petId}}/meals/{{caregiverMealId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pets",
+                "{{petId}}",
+                "meals",
+                "{{caregiverMealId}}",
+                "void"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicada\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -7003,6 +7801,22 @@
     {
       "key": "rateLimitAttempt",
       "value": "0"
+    },
+    {
+      "key": "voidMealId",
+      "value": ""
+    },
+    {
+      "key": "voidWeightId",
+      "value": ""
+    },
+    {
+      "key": "caregiverMealId",
+      "value": ""
+    },
+    {
+      "key": "longReason",
+      "value": ""
     }
   ]
 }

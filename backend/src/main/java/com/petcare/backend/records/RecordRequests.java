@@ -120,4 +120,11 @@ public final class RecordRequests {
 
     public record DoseCreated(PreventiveDose dose, Long generatedTaskId) {
     }
+
+    // Cuerpo opcional de la anulación
+    public record VoidRecord(
+            @Size(max = 300, message = "El motivo no puede superar 300 caracteres")
+            String reason
+    ) {
+    }
 }

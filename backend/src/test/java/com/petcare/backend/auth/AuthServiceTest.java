@@ -200,4 +200,18 @@ class AuthServiceTest {
         user.setStatus(status);
         return user;
     }
+
+    @Test
+    @DisplayName("El hogar automático usa solo el primer nombre")
+    void defaultHouseholdNameUsesFirstName() {
+        assertThat(AuthService.defaultHouseholdName("  Laura   Gómez Rincón ")).isEqualTo("Hogar de Laura");
+        assertThat(AuthService.defaultHouseholdName("Ana")).isEqualTo("Hogar de Ana");
+    }
+
+    @Test
+    @DisplayName("Un primer nombre muy largo se recorta a la longitud de la columna (120)")
+    void defaultHouseholdNameFitsTheColumn() {
+        String longName = "A".repeat(120);
+        assertThat(AuthService.defaultHouseholdName(longName)).hasSize(AuthService.HOUSEHOLD_NAME_MAX).startsWith("Hogar de A");
+    }
 }

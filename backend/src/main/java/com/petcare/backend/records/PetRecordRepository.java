@@ -12,6 +12,9 @@ public interface PetRecordRepository<T extends PetRecord> extends JpaRepository<
 
     List<T> findByPetIdAndStatusOrderByOccurredAtDesc(Long petId, RecordStatus status);
 
+    // Activos y anulados (?includeVoided=true)
+    List<T> findByPetIdOrderByOccurredAtDesc(Long petId);
+
     List<T> findByPetIdAndStatusAndOccurredAtBetween(Long petId, RecordStatus status,
                                                      LocalDateTime from, LocalDateTime to);
 

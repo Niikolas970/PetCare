@@ -4,6 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.petcare.backend.common.BadRequestException;
+import com.petcare.backend.common.BusinessRuleException;
+import com.petcare.backend.common.ResourceNotFoundException;
+import com.petcare.backend.households.HouseholdAccessService;
 import com.petcare.backend.households.HouseholdClock;
 import com.petcare.backend.pets.Pet;
 import com.petcare.backend.pets.PetService;
@@ -14,6 +17,7 @@ import com.petcare.backend.records.RecordRequests.CreateTreatment;
 import com.petcare.backend.records.RecordRequests.CreateWeight;
 import com.petcare.backend.records.RecordRequests.CreateWellbeing;
 import com.petcare.backend.records.RecordRequests.DoseCreated;
+import com.petcare.backend.records.RecordRequests.VoidRecord;
 import com.petcare.backend.tasks.CareTask;
 import com.petcare.backend.tasks.CareTaskService;
 
@@ -21,13 +25,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Historial clínico y registros diarios. Crear: OWNER y CAREGIVER.
- * No hay borrado físico (los registros se anulan con status VOIDED).
+ * Historial clínico y registros diarios. Crear: OWNER y CAREGIVER. Anular: solo OWNER.
+ * No hay borrado físico: los registros se anulan con status VOIDED, guardando quién, cuándo y por qué.
  */
 @Service
 public class PetRecordService {
 
+    static final String RECORD_NOT_FOUND = "El registro no existe";
+    static final String ALREADY_VOIDED = "El registro ya está anulado";
+
     private final PetService petService;
+    private final HouseholdAccessService accessService;
     private final HouseholdClock clock;
     private final CareTaskService careTaskService;
     private final HealthRecordRepository healthRecordRepository;
@@ -37,7 +45,8 @@ public class PetRecordService {
     private final WeightRecordRepository weightRepository;
     private final WellbeingLogRepository wellbeingRepository;
 
-    public PetRecordService(PetService petService, HouseholdClock clock, CareTaskService careTaskService,
+    public PetRecordService(PetService petService, HouseholdAccessService accessService, HouseholdClock clock,
+                            CareTaskService careTaskService,
                             HealthRecordRepository healthRecordRepository,
                             PreventiveDoseRepository doseRepository,
                             TreatmentRepository treatmentRepository,
@@ -45,6 +54,7 @@ public class PetRecordService {
                             WeightRecordRepository weightRepository,
                             WellbeingLogRepository wellbeingRepository) {
         this.petService = petService;
+        this.accessService = accessService;
         this.clock = clock;
         this.careTaskService = careTaskService;
         this.healthRecordRepository = healthRecordRepository;
@@ -58,8 +68,8 @@ public class PetRecordService {
     // ---------- Registros de salud ----------
 
     @Transactional(readOnly = true)
-    public List<HealthRecord> listHealthRecords(Long petId, Long userId) {
-        return list(healthRecordRepository, petId, userId);
+    public List<HealthRecord> listHealthRecords(Long petId, Long userId, boolean includeVoided) {
+        return list(healthRecordRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -73,11 +83,16 @@ public class PetRecordService {
         return save(healthRecordRepository, pet, userId, request.occurredAt(), record);
     }
 
+    @Transactional
+    public HealthRecord voidHealthRecord(Long petId, Long recordId, Long userId, VoidRecord request) {
+        return voidRecord(healthRecordRepository, petId, recordId, userId, request);
+    }
+
     // ---------- Vacunas y desparasitaciones ----------
 
     @Transactional(readOnly = true)
-    public List<PreventiveDose> listDoses(Long petId, Long userId) {
-        return list(doseRepository, petId, userId);
+    public List<PreventiveDose> listDoses(Long petId, Long userId, boolean includeVoided) {
+        return list(doseRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -102,11 +117,16 @@ public class PetRecordService {
         return new DoseCreated(dose, taskId);
     }
 
+    @Transactional
+    public PreventiveDose voidDose(Long petId, Long recordId, Long userId, VoidRecord request) {
+        return voidRecord(doseRepository, petId, recordId, userId, request);
+    }
+
     // ---------- Tratamientos ----------
 
     @Transactional(readOnly = true)
-    public List<Treatment> listTreatments(Long petId, Long userId) {
-        return list(treatmentRepository, petId, userId);
+    public List<Treatment> listTreatments(Long petId, Long userId, boolean includeVoided) {
+        return list(treatmentRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -126,11 +146,16 @@ public class PetRecordService {
         return treatment;
     }
 
+    @Transactional
+    public Treatment voidTreatment(Long petId, Long recordId, Long userId, VoidRecord request) {
+        return voidRecord(treatmentRepository, petId, recordId, userId, request);
+    }
+
     // ---------- Comidas ----------
 
     @Transactional(readOnly = true)
-    public List<Meal> listMeals(Long petId, Long userId) {
-        return list(mealRepository, petId, userId);
+    public List<Meal> listMeals(Long petId, Long userId, boolean includeVoided) {
+        return list(mealRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -143,11 +168,16 @@ public class PetRecordService {
         return save(mealRepository, pet, userId, request.occurredAt(), meal);
     }
 
+    @Transactional
+    public Meal voidMeal(Long petId, Long recordId, Long userId, VoidRecord request) {
+        return voidRecord(mealRepository, petId, recordId, userId, request);
+    }
+
     // ---------- Pesos ----------
 
     @Transactional(readOnly = true)
-    public List<WeightRecord> listWeights(Long petId, Long userId) {
-        return list(weightRepository, petId, userId);
+    public List<WeightRecord> listWeights(Long petId, Long userId, boolean includeVoided) {
+        return list(weightRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -157,18 +187,28 @@ public class PetRecordService {
         weight.setWeightKg(request.weightKg());
         weight.setNotes(request.notes());
         weight = save(weightRepository, pet, userId, request.occurredAt(), weight);
+        refreshCurrentWeight(pet);
+        return weight;
+    }
 
-        // pets.weight_kg refleja siempre la medición más reciente
+    @Transactional
+    public WeightRecord voidWeight(Long petId, Long recordId, Long userId, VoidRecord request) {
+        WeightRecord voided = voidRecord(weightRepository, petId, recordId, userId, request);
+        refreshCurrentWeight(petService.getById(petId, userId));
+        return voided;
+    }
+
+    // pets.weight_kg refleja siempre la medición ACTIVE más reciente (si no queda ninguna, no se toca)
+    private void refreshCurrentWeight(Pet pet) {
         weightRepository.findFirstByPetIdAndStatusOrderByOccurredAtDescIdDesc(pet.getId(), RecordStatus.ACTIVE)
                 .ifPresent(latest -> petService.updateCurrentWeight(pet, latest.getWeightKg()));
-        return weight;
     }
 
     // ---------- Bienestar ----------
 
     @Transactional(readOnly = true)
-    public List<WellbeingLog> listWellbeing(Long petId, Long userId) {
-        return list(wellbeingRepository, petId, userId);
+    public List<WellbeingLog> listWellbeing(Long petId, Long userId, boolean includeVoided) {
+        return list(wellbeingRepository, petId, userId, includeVoided);
     }
 
     @Transactional
@@ -182,11 +222,19 @@ public class PetRecordService {
         return save(wellbeingRepository, pet, userId, request.occurredAt(), log);
     }
 
+    @Transactional
+    public WellbeingLog voidWellbeing(Long petId, Long recordId, Long userId, VoidRecord request) {
+        return voidRecord(wellbeingRepository, petId, recordId, userId, request);
+    }
+
     // ---------- Internos ----------
 
-    private <T extends PetRecord> List<T> list(PetRecordRepository<T> repository, Long petId, Long userId) {
+    private <T extends PetRecord> List<T> list(PetRecordRepository<T> repository, Long petId, Long userId,
+                                               boolean includeVoided) {
         petService.getById(petId, userId);
-        return repository.findByPetIdAndStatusOrderByOccurredAtDesc(petId, RecordStatus.ACTIVE);
+        return includeVoided
+                ? repository.findByPetIdOrderByOccurredAtDesc(petId)
+                : repository.findByPetIdAndStatusOrderByOccurredAtDesc(petId, RecordStatus.ACTIVE);
     }
 
     private <T extends PetRecord> T save(PetRecordRepository<T> repository, Pet pet, Long userId,
@@ -201,6 +249,31 @@ public class PetRecordService {
         record.setOccurredAt(when);
         record.setStatus(RecordStatus.ACTIVE);
         record.setCreatedBy(userId);
+        return repository.save(record);
+    }
+
+    /**
+     * Anula sin borrar: 404 si el registro no es de esa mascota, 403 si no es OWNER,
+     * 409 si la mascota está archivada o el registro ya estaba anulado.
+     */
+    private <T extends PetRecord> T voidRecord(PetRecordRepository<T> repository, Long petId, Long recordId,
+                                               Long userId, VoidRecord request) {
+        Pet pet = petService.getById(petId, userId);
+        T record = repository.findById(recordId)
+                .filter(r -> r.getPetId().equals(petId))
+                .orElseThrow(() -> new ResourceNotFoundException(RECORD_NOT_FOUND));
+        accessService.requireOwner(pet.getHouseholdId(), userId);
+        petService.requireWritable(petId, userId);
+        if (record.getStatus() == RecordStatus.VOIDED) {
+            throw new BusinessRuleException(ALREADY_VOIDED);
+        }
+
+        String reason = request == null || request.reason() == null || request.reason().isBlank()
+                ? null : request.reason().trim();
+        record.setStatus(RecordStatus.VOIDED);
+        record.setVoidedBy(userId);
+        record.setVoidedAt(clock.now(pet.getHouseholdId()));
+        record.setVoidReason(reason);
         return repository.save(record);
     }
 }

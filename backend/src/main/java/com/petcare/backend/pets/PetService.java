@@ -23,6 +23,12 @@ public class PetService {
 
     @Transactional(readOnly = true)
     public List<Pet> listActive(Long userId, Long householdId) {
+        return list(userId, householdId, PetStatus.ACTIVE);
+    }
+
+    /** Mascotas de mis hogares (o de uno) con el estado pedido; los miembros CAREGIVER también ven las archivadas. */
+    @Transactional(readOnly = true)
+    public List<Pet> list(Long userId, Long householdId, PetStatus status) {
         List<Long> householdIds;
         if (householdId != null) {
             accessService.requireMember(householdId, userId);
@@ -34,7 +40,7 @@ public class PetService {
         if (householdIds.isEmpty()) {
             return List.of();
         }
-        return petRepository.findByHouseholdIdInAndStatusOrderByIdAsc(householdIds, PetStatus.ACTIVE);
+        return petRepository.findByHouseholdIdInAndStatusOrderByIdAsc(householdIds, status);
     }
 
     /**
