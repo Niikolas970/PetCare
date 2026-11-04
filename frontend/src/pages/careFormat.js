@@ -146,6 +146,18 @@ export function plural(n, one, many) {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** Fecha local del navegador "YYYY-MM-DD" (cuando no se tiene la fecha del hogar). */
+export function localToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** "YYYY-MM-DDTHH:mm" local del navegador, para limitar <input type="datetime-local"> a "ahora". */
+export function localNow() {
+  const d = new Date();
+  return `${localToday()}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 /** Valor para <input type="datetime-local">: mañana a las 9:00 en la fecha del hogar. */
 export function defaultDueAt(today) {
   return `${addDays(today, 1)}T09:00`;

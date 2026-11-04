@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { householdsApi } from '../api/services.js';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { useHouseholds } from '../households/HouseholdContext.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import ErrorMessage from '../components/ErrorMessage.jsx';
 import Icon from '../components/Icon.jsx';
@@ -13,8 +13,6 @@ import PetsSection from './home/PetsSection.jsx';
 import { AddPetForm, MealForm, TaskForm, WeightForm } from './home/QuickForms.jsx';
 import { HouseholdPanel, QuickActions, WeekStrip } from './home/SidePanels.jsx';
 import { useHomeData } from './home/useHomeData.js';
-
-const HOUSEHOLD_KEY = 'petcare.householdId';
 
 const longDate = new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
 
@@ -63,29 +61,15 @@ function Summary({ households, householdId, onHousehold, dashboard, groups }) {
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [households, setHouseholds] = useState(null);
-  const [householdsError, setHouseholdsError] = useState(null);
-  const [householdId, setHouseholdId] = useState(() => Number(sessionStorage.getItem(HOUSEHOLD_KEY)) || null);
+  const {
+    households,
+    error: householdsError,
+    selectedId: householdId,
+    setSelectedId: setHouseholdId,
+    reload: reloadHouseholds,
+  } = useHouseholds();
   const [dialog, setDialog] = useState(null); // 'meal' | 'weight' | 'task' | 'pet'
   const [notice, setNotice] = useState(null);
-  const [householdsVersion, setHouseholdsVersion] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    householdsApi
-      .listMine(controller.signal)
-      .then((list) => {
-        setHouseholdsError(null);
-        setHouseholds(list);
-        setHouseholdId((current) => (list.some((h) => h.id === current) ? current : (list[0]?.id ?? null)));
-      })
-      .catch((err) => err.name !== 'AbortError' && setHouseholdsError(err));
-    return () => controller.abort();
-  }, [householdsVersion]);
-
-  useEffect(() => {
-    if (householdId) sessionStorage.setItem(HOUSEHOLD_KEY, String(householdId));
-  }, [householdId]);
 
   const home = useHomeData(householdId);
   const data = home.data;
@@ -117,7 +101,7 @@ export default function HomePage() {
       {error && (
         <ErrorMessage
           title="No pudimos cargar tu hogar"
-          onRetry={() => (householdsError ? setHouseholdsVersion((v) => v + 1) : home.reload())}
+          onRetry={() => (householdsError ? reloadHouseholds() : home.reload())}
         >
           {error.message}
         </ErrorMessage>
@@ -137,7 +121,7 @@ export default function HomePage() {
             <Summary
               households={households}
               householdId={householdId}
-              onHousehold={(e) => setHouseholdId(Number(e.target.value))}
+              onHousehold={(e) => setHouseholdId(e.target.value)}
               dashboard={data.dashboard}
               groups={groupTasks(data.overdue, data.upcoming, data.dashboard.today)}
             />
@@ -147,6 +131,9 @@ export default function HomePage() {
               overdue={data.overdue}
               upcoming={data.upcoming}
               today={data.dashboard.today}
+              hasPets={data.pets.length > 0}
+              onSchedule={() => setDialog('task')}
+              onAddPet={() => setDialog('pet')}
               onChanged={home.reload}
               onNotice={showNotice}
             />

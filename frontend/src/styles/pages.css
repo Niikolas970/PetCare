@@ -6,7 +6,8 @@
    ========================================================= */
 .shell {
   min-height: 100dvh;
-  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  /* Nada queda escondido detrás de la navegación inferior */
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
 }
 .sidebar,
 .topbar-nav {
@@ -43,10 +44,12 @@
   right: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
   max-width: 480px;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
   margin: 0 auto;
-  padding: var(--s-1) var(--s-2) calc(var(--s-1) + env(safe-area-inset-bottom));
+  padding: 0 var(--s-1) env(safe-area-inset-bottom);
   background: var(--surface);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
   box-shadow: 0 -6px 20px rgba(110, 70, 30, 0.1);
@@ -219,10 +222,24 @@
   font-size: var(--fs-section);
   font-weight: 600;
 }
-.section-count {
-  color: var(--text-2);
+/* Contador como chip pequeño, en Outfit */
+.section-count,
+.care-group-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: var(--font);
   font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+.section-head {
+  align-items: center;
 }
 
 /* Resumen del hogar: plano, en miel; el caramelo queda para actuar */
@@ -242,7 +259,9 @@
   gap: var(--s-3);
 }
 .summary-title {
+  min-width: 0;
   font-size: var(--fs-section);
+  overflow-wrap: anywhere;
 }
 .summary-select {
   width: min(100%, 260px);
@@ -275,21 +294,15 @@
   font-size: 1.625rem;
 }
 
-/* Mascotas: fila deslizable en celular, rejilla desde tablet */
+/* Mascotas: 2 columnas en celular (sin carrusel ni barra de scroll), más columnas desde tablet */
 .pet-grid {
-  display: flex;
-  gap: var(--s-4);
-  margin: 0 calc(var(--s-5) * -1);
-  padding: var(--s-1) var(--s-5) var(--s-4);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding: 0 var(--s-5);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
 }
 .pet-slide {
   display: flex;
-  flex: none;
-  width: 236px;
-  scroll-snap-align: start;
+  min-width: 0;
   animation: rise 360ms var(--ease-out) both;
   animation-delay: calc(var(--i, 0) * 50ms);
 }
@@ -301,14 +314,8 @@
 }
 @media (min-width: 768px) {
   .pet-grid {
-    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-  }
-  .pet-slide {
-    width: auto;
+    gap: var(--s-4);
   }
 }
 
@@ -319,10 +326,32 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--s-3);
-  padding: var(--s-5);
+  min-width: 0;
+  padding: var(--s-4);
   border-radius: var(--r-lg);
   color: inherit;
   text-decoration: none;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) {
+  .pet-card,
+  .pet-add {
+    padding: var(--s-5);
+  }
+}
+.pet-card .chip,
+.pet-add .chip {
+  max-width: 100%;
+  overflow-wrap: normal;
+}
+/* En 2 columnas de celular el chip pierde el ícono para que el texto quepa por palabras */
+@media (max-width: 767px) {
+  .pet-card .chip {
+    padding: 4px 10px;
+  }
+  .pet-next .chip .icon {
+    display: none;
+  }
 }
 .pet-card {
   background: var(--surface-raised);
@@ -351,7 +380,7 @@
 }
 .pet-add {
   justify-content: center;
-  min-height: 220px;
+  min-height: 200px;
   border: 0;
   background: var(--surface-sunken);
   font: inherit;
@@ -395,18 +424,6 @@
 }
 #grupo-vencidos .care-group-title {
   color: var(--late-text);
-}
-.care-group-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: var(--r-pill);
-  background: var(--surface-sunken);
-  color: var(--text);
-  font-size: var(--fs-sm);
-  font-variant-numeric: tabular-nums;
 }
 #grupo-vencidos {
   scroll-margin-top: 96px;
@@ -535,6 +552,10 @@
   margin-top: calc(var(--s-2) * -1);
   color: var(--text-2);
   font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.empty-action {
+  margin-top: var(--s-3);
 }
 
 .action-list {

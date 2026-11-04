@@ -1,54 +1,11 @@
 import { useState } from 'react';
-import { petsApi, recordsApi, tasksApi } from '../../api/services.js';
-import Button from '../../components/Button.jsx';
-import ErrorMessage from '../../components/ErrorMessage.jsx';
+import { recordsApi, tasksApi } from '../../api/services.js';
+import FormModal from '../../components/FormModal.jsx';
 import Input from '../../components/Input.jsx';
-import Modal from '../../components/Modal.jsx';
 import Select from '../../components/Select.jsx';
-import { CARE_TASK_TYPE, SEX } from '../../i18n/labels.js';
+import { CARE_TASK_TYPE } from '../../i18n/labels.js';
+import PetFormDialog from '../pets/PetFormDialog.jsx';
 import { defaultDueAt } from '../careFormat.js';
-
-/** Formulario dentro de un diálogo: valida en cliente, envía y muestra los errores del backend por campo. */
-function FormModal({ title, submitLabel, open, onClose, validate, submit, onDone, children, values }) {
-  const [errors, setErrors] = useState({});
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  async function onSubmit(e) {
-    e.preventDefault();
-    setFormError('');
-    const clientErrors = validate(values);
-    setErrors(clientErrors);
-    if (Object.keys(clientErrors).length) return;
-    setSaving(true);
-    try {
-      const result = await submit(values);
-      setSaving(false);
-      onDone(result);
-    } catch (err) {
-      setErrors(err.errors || {});
-      setFormError(err.message);
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title={title}>
-      <form className="form" onSubmit={onSubmit} noValidate>
-        {formError && <ErrorMessage inline>{formError}</ErrorMessage>}
-        {typeof children === 'function' ? children(errors) : children}
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            {submitLabel}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 function PetSelect({ pets, value, onChange, error }) {
   return (
@@ -189,78 +146,15 @@ export function TaskForm({ open, pets, today, onClose, onDone }) {
   );
 }
 
-const SPECIES = ['Perro', 'Gato', 'Conejo', 'Ave'];
-
+/** «Agregar mascota» desde el Inicio: el mismo formulario de la sección Mascotas. */
 export function AddPetForm({ open, householdId, today, onClose, onDone }) {
-  const [values, setValues] = useState({ name: '', species: '', breed: '', sex: 'UNKNOWN', birthDate: '', weightKg: '' });
-  const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }));
-
   return (
-    <FormModal
+    <PetFormDialog
       open={open}
-      title="Agregar mascota"
-      submitLabel="Agregar mascota"
-      values={values}
+      householdId={householdId}
+      today={today}
       onClose={onClose}
-      validate={(v) => {
-        const e = {};
-        if (!v.name.trim()) e.name = 'El nombre es obligatorio';
-        else if (v.name.trim().length > 100) e.name = 'El nombre no puede superar 100 caracteres';
-        if (!v.species.trim()) e.species = 'La especie es obligatoria';
-        else if (v.species.trim().length > 40) e.species = 'La especie no puede superar 40 caracteres';
-        if (v.breed.trim().length > 100) e.breed = 'La raza no puede superar 100 caracteres';
-        if (v.birthDate && v.birthDate > today) e.birthDate = 'La fecha de nacimiento no puede ser futura';
-        if (v.weightKg) {
-          const n = Number(String(v.weightKg).replace(',', '.'));
-          if (!Number.isFinite(n) || n <= 0) e.weightKg = 'El peso debe ser mayor que cero';
-        }
-        return e;
-      }}
-      submit={(v) =>
-        petsApi.create({
-          householdId,
-          name: v.name.trim(),
-          species: v.species.trim(),
-          breed: v.breed.trim() || null,
-          sex: v.sex,
-          birthDate: v.birthDate || null,
-          birthDateIsEstimated: false,
-          weightKg: v.weightKg ? Number(String(v.weightKg).replace(',', '.')) : null,
-          notes: null,
-        })
-      }
       onDone={(pet) => onDone(`${pet.name} ya es parte del hogar.`)}
-    >
-      {(errors) => (
-        <>
-          <Input label="Nombre" value={values.name} onChange={set('name')} error={errors.name} autoComplete="off" />
-          <Input
-            label="Especie"
-            value={values.species}
-            onChange={set('species')}
-            error={errors.species}
-            list="species-options"
-            placeholder="Perro, gato, conejo…"
-          />
-          <datalist id="species-options">
-            {SPECIES.map((s) => (
-              <option key={s} value={s} />
-            ))}
-          </datalist>
-          <Input label="Raza (opcional)" value={values.breed} onChange={set('breed')} error={errors.breed} />
-          <div className="form-row">
-            <Select label="Sexo" value={values.sex} onChange={set('sex')}>
-              {Object.entries(SEX).map(([key, text]) => (
-                <option key={key} value={key}>
-                  {text}
-                </option>
-              ))}
-            </Select>
-            <Input label="Peso en kg (opcional)" inputMode="decimal" value={values.weightKg} onChange={set('weightKg')} error={errors.weightKg} />
-          </div>
-          <Input label="Fecha de nacimiento (opcional)" type="date" max={today} value={values.birthDate} onChange={set('birthDate')} error={errors.birthDate} />
-        </>
-      )}
-    </FormModal>
+    />
   );
 }

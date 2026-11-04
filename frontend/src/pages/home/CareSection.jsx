@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { tasksApi } from '../../api/services.js';
+import Button from '../../components/Button.jsx';
 import Chip from '../../components/Chip.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 import Icon from '../../components/Icon.jsx';
@@ -72,7 +73,7 @@ function Group({ id, title, tasks, today, states, onComplete }) {
   );
 }
 
-export default function CareSection({ overdue, upcoming, today, onChanged, onNotice }) {
+export default function CareSection({ overdue, upcoming, today, hasPets, onSchedule, onAddPet, onChanged, onNotice }) {
   // id -> 'saving' | 'done' | 'gone'
   const [states, setStates] = useState({});
   const setTaskState = (id, value) => setStates((s) => ({ ...s, [id]: value }));
@@ -108,9 +109,31 @@ export default function CareSection({ overdue, upcoming, today, onChanged, onNot
       </div>
       {total === 0 ? (
         <div className="panel">
-          <EmptyState art="done" title="Todo al día">
-            No hay cuidados vencidos ni programados para los próximos 7 días. Usa «Nueva tarea» para agendar el próximo.
-          </EmptyState>
+          {hasPets ? (
+            <EmptyState
+              art="done"
+              title="Todo al día"
+              action={
+                <Button icon="plus" onClick={onSchedule} className="empty-action">
+                  Programar un cuidado
+                </Button>
+              }
+            >
+              No hay cuidados vencidos ni programados para los próximos 7 días.
+            </EmptyState>
+          ) : (
+            <EmptyState
+              art="paw"
+              title="Sin cuidados todavía"
+              action={
+                <Button icon="plus" onClick={onAddPet} className="empty-action">
+                  Agregar mascota
+                </Button>
+              }
+            >
+              Para programar un cuidado, primero agrega una mascota.
+            </EmptyState>
+          )}
         </div>
       ) : (
         <div className="panel care-panel">

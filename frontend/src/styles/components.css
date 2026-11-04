@@ -472,7 +472,7 @@
 .toast-region {
   position: fixed;
   left: 50%;
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--s-3));
   z-index: 40;
   width: min(92vw, 440px);
   transform: translateX(-50%);
@@ -656,9 +656,13 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
+  min-width: 0;
   min-height: 60px;
+  padding: 0 2px;
   border-radius: var(--r-md);
   font-size: var(--fs-sm);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .tab-link .icon {
   color: var(--text-3);

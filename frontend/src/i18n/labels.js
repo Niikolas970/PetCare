@@ -49,6 +49,39 @@ export const TIMELINE_TYPE = {
   TASK: 'Cuidado',
 };
 
+export const HEALTH_RECORD_TYPE = {
+  CONSULTATION: 'Consulta',
+  DIAGNOSIS: 'Diagnóstico',
+  EXAM: 'Examen',
+  SURGERY: 'Cirugía',
+  ALLERGY: 'Alergia',
+  OTHER: 'Otro',
+};
+
+export const DOSE_KIND = {
+  VACCINE: 'Vacuna',
+  DEWORMING: 'Desparasitación',
+};
+
+export const MOOD = {
+  VERY_BAD: 'Muy mal',
+  BAD: 'Mal',
+  NORMAL: 'Normal',
+  GOOD: 'Bien',
+  VERY_GOOD: 'Muy bien',
+};
+
+export const LEVEL = {
+  LOW: 'Bajo',
+  NORMAL: 'Normal',
+  HIGH: 'Alto',
+};
+
+export const RECORD_STATUS = {
+  ACTIVE: 'Activo',
+  VOIDED: 'Anulado',
+};
+
 // Devuelve la traducción o, si el backend envía un valor nuevo, el valor tal cual
 export function label(map, key) {
   if (key == null) return '';

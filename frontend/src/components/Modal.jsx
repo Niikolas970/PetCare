@@ -5,7 +5,7 @@ import Icon from './Icon.jsx';
  * Diálogo accesible sobre <dialog>: el navegador atrapa el foco, Esc cierra y el fondo queda inerte.
  * Úsalo solo cuando la tarea necesita interrumpir al usuario.
  */
-export default function Modal({ open, onClose, title, children }) {
+export default function Modal({ open, onClose, title, sheet = false, children }) {
   const ref = useRef(null);
   const titleId = useId();
 
@@ -19,7 +19,7 @@ export default function Modal({ open, onClose, title, children }) {
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={`modal${sheet ? ' modal-sheet' : ''}`}
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {

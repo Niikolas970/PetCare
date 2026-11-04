@@ -83,6 +83,8 @@
   --s-8: 32px;
   --s-10: 40px;
   --tap: 44px;
+  /* Altura de la navegación inferior en celular (sin el área segura) */
+  --tabbar-h: 68px;
 
   /* Superficies extra */
   --honey: #f8e4c9;

@@ -1,0 +1,546 @@
+/* =========================================================
+   Sección Mascotas: listado, ficha, pestañas y registros
+   ========================================================= */
+
+/* ---------- Controles nuevos ---------- */
+.btn-danger {
+  color: var(--on-primary);
+  background: var(--rose-text);
+  box-shadow: 0 8px 20px rgba(156, 50, 44, 0.22);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger:hover:not(:disabled) {
+    background: #86281f;
+  }
+}
+
+.field-textarea {
+  min-height: 96px;
+  padding: var(--s-3) var(--s-4);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.check-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--tap);
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+.check-box {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--primary-tint);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: transparent;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.check-input:checked + .check-label .check-box {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.check-input:focus-visible + .check-label .check-box {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.check-input:disabled + .check-label {
+  color: var(--text-2);
+  cursor: not-allowed;
+}
+.check-hint {
+  flex-basis: 100%;
+  margin-top: calc(var(--s-1) * -1);
+  padding-left: 36px;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+}
+.segmented-option {
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    transform 160ms var(--ease-out);
+}
+.segmented-option:active {
+  transform: scale(0.97);
+}
+.segmented-option[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-float);
+}
+
+.search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--s-4);
+  color: var(--text-2);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.search-input {
+  min-height: 48px;
+  padding-left: 46px;
+  border-radius: var(--r-pill);
+}
+
+/* Diálogo como página completa en celular */
+@media (max-width: 767px) {
+  .modal-sheet {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+  .modal-sheet .modal-body {
+    min-height: 100%;
+    padding: var(--s-4) var(--s-5) calc(var(--s-6) + env(safe-area-inset-bottom));
+  }
+  .modal-sheet .modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: calc(var(--s-4) * -1) calc(var(--s-5) * -1) var(--s-3);
+    padding: var(--s-3) var(--s-5);
+    background: var(--surface);
+  }
+  .modal-sheet[open] {
+    transform: translateY(0);
+  }
+  @starting-style {
+    .modal-sheet[open] {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+}
+.confirm-text {
+  color: var(--text);
+  max-width: 52ch;
+}
+
+/* ---------- /mascotas ---------- */
+.pets-page {
+  max-width: 1200px;
+}
+.pets-page .page-header {
+  flex-wrap: wrap;
+}
+.pets-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.pets-toolbar .search {
+  flex-basis: 220px;
+}
+.pets-household {
+  width: min(100%, 240px);
+}
+@media (min-width: 1024px) {
+  .pets-list {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+.pet-card.is-archived {
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+.pet-card.is-archived .pet-avatar {
+  filter: grayscale(0.6);
+  opacity: 0.8;
+}
+
+/* ---------- Ficha ---------- */
+.pet-page {
+  max-width: 960px;
+}
+.pet-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-4) var(--s-5);
+}
+.pet-hero-text {
+  min-width: 0;
+}
+.pet-hero-text .page-title {
+  overflow-wrap: anywhere;
+}
+.pet-hero-sub {
+  margin: var(--s-1) 0 var(--s-3);
+  color: var(--text-2);
+}
+.pet-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  grid-column: 1 / -1;
+}
+@media (min-width: 768px) {
+  .pet-hero {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .pet-hero-actions {
+    grid-column: auto;
+    align-self: start;
+    justify-content: flex-end;
+  }
+}
+.archived-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+
+/* Pestañas: deslizables en celular */
+.tabs {
+  display: flex;
+  gap: var(--s-1);
+  margin: 0 calc(var(--s-5) * -1);
+  padding: 0 var(--s-5) 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  position: relative;
+  flex: none;
+  min-height: 48px;
+  padding: 0 var(--s-4);
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 200ms ease;
+}
+.tab::after {
+  content: '';
+  position: absolute;
+  left: var(--s-4);
+  right: var(--s-4);
+  bottom: -3px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform 240ms var(--ease-out);
+}
+.tab[aria-selected='true'] {
+  color: var(--primary);
+  font-weight: 600;
+}
+.tab[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover:not([aria-selected='true']) {
+    color: var(--text);
+  }
+}
+@media (min-width: 768px) {
+  .tabs {
+    margin: 0;
+    padding: 0;
+  }
+}
+.tab-panel {
+  animation: panel-in 220ms var(--ease-out) both;
+}
+.tab-panel:focus {
+  outline: none;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.tab-stack,
+.tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.tab-stack {
+  gap: var(--s-8);
+}
+.tab-grid {
+  display: grid;
+  gap: var(--s-8);
+}
+@media (min-width: 1024px) {
+  .tab-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+.tab-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.tab-section-head .section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.tab-subtitle {
+  font-size: var(--fs-md);
+}
+.voided-toggle {
+  margin-top: calc(var(--s-2) * -1);
+}
+
+.vet-note {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--blue-bg);
+  color: var(--blue-text);
+  font-weight: 500;
+}
+
+/* Registros */
+.record-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.record {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-2) var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+  animation: rise 300ms var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 35ms);
+}
+.record-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.record-side {
+  display: flex;
+  align-items: flex-start;
+}
+.record-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.record-title-icon {
+  color: var(--primary);
+}
+.record-weight {
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+.record-meta {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.record-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+.record-notes {
+  max-width: 65ch;
+  margin-top: var(--s-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.record-void {
+  color: var(--late-text);
+}
+.record.is-voided {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--line);
+}
+.record.is-voided .record-body {
+  opacity: 0.6;
+}
+.record.is-voided .record-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-2);
+}
+.record-voided-note {
+  grid-column: 1 / -1;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+.chip-link {
+  min-height: var(--tap);
+  border: 0;
+  cursor: pointer;
+}
+
+/* Bienestar */
+.mood-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.mood-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+.mood-option {
+  position: relative;
+}
+.mood-option input {
+  position: absolute;
+  opacity: 0;
+}
+.mood-option span {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border: 2px solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-float);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms var(--ease-out);
+}
+.mood-option span:active {
+  transform: scale(0.97);
+}
+.mood-option input:checked + span {
+  border-color: var(--primary);
+  background: var(--nav-active);
+  color: var(--primary);
+}
+.mood-option input:focus-visible + span {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.mood-field.field-invalid .mood-option span {
+  border-color: var(--rose-bg);
+}
+
+/* Gráfica de peso */
+.weight-chart {
+  margin: 0;
+}
+.weight-chart svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+}
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.chart-label {
+  fill: var(--text-2);
+  font-family: var(--font);
+  font-size: 14px;
+}
+.chart-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.chart-area {
+  fill: var(--honey);
+  opacity: 0.7;
+}
+.chart-dot {
+  fill: var(--surface-raised);
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+.chart-dot.is-last {
+  fill: var(--primary);
+}
+.chart-caption {
+  margin-top: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record,
+  .tab-panel {
+    animation: none;
+  }
+}

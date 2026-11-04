@@ -50,19 +50,41 @@ export const tasksApi = {
 };
 
 export const petsApi = {
-  // GET /api/pets?householdId= -> [Pet] (id, householdId, name, species, breed, sex, birthDate, weightKg, status...)
-  list: (householdId, signal) => request(`/api/pets?householdId=${householdId}`, { signal }),
-  // GET /api/pets/{id}
+  // GET /api/pets?householdId=&status=ACTIVE|ARCHIVED -> [Pet]
+  // (id, householdId, name, species, breed, sex, birthDate, birthDateIsEstimated, weightKg, notes, status)
+  list: (householdId, signal, status = 'ACTIVE') =>
+    request(`/api/pets?householdId=${householdId}&status=${status}`, { signal }),
+  // GET /api/pets/{id} (también si está archivada)
   get: (id, signal) => request(`/api/pets/${id}`, { signal }),
   // POST /api/pets {householdId, name, species, breed, sex, birthDate, birthDateIsEstimated, weightKg, notes}
   create: (body) => request('/api/pets', { method: 'POST', body }),
+  // PUT /api/pets/{id} {name, species, breed, sex, birthDate, birthDateIsEstimated, weightKg, notes}; 409 si está archivada
+  update: (id, body) => request(`/api/pets/${id}`, { method: 'PUT', body }),
+  // PATCH /api/pets/{id}/archive y /restore (solo OWNER; 403 para CAREGIVER)
+  archive: (id) => request(`/api/pets/${id}/archive`, { method: 'PATCH' }),
+  restore: (id) => request(`/api/pets/${id}/restore`, { method: 'PATCH' }),
+  // GET /api/pets/{petId}/timeline?types=  -> [{type, id, petId, petName, date, title, summary, createdBy}]
+  timeline: (petId, types, signal) =>
+    request(`/api/pets/${petId}/timeline${types ? `?types=${types}` : ''}`, { signal }),
 };
 
+/**
+ * Registros de la mascota. kind = segmento exacto de la ruta:
+ * health-records | doses | treatments | meals | weights | wellbeing
+ */
 export const recordsApi = {
-  // POST /api/pets/{petId}/meals {food, quantity, occurredAt, notes}
+  // GET /api/pets/{petId}/{kind}?includeVoided=true
+  list: (petId, kind, includeVoided, signal) =>
+    request(`/api/pets/${petId}/${kind}${includeVoided ? '?includeVoided=true' : ''}`, { signal }),
+  // POST /api/pets/{petId}/{kind}
+  create: (petId, kind, body) => request(`/api/pets/${petId}/${kind}`, { method: 'POST', body }),
+  // PATCH /api/pets/{petId}/{kind}/{id}/void {reason} (solo OWNER)
+  void: (petId, kind, id, reason) =>
+    request(`/api/pets/${petId}/${kind}/${id}/void`, { method: 'PATCH', body: { reason: reason || null } }),
+
+  // Atajos usados por el Inicio
   meal: (petId, { food, quantity, notes }) =>
     request(`/api/pets/${petId}/meals`, { method: 'POST', body: { food, quantity, notes } }),
-  // POST /api/pets/{petId}/weights {weightKg, occurredAt, notes}
   weight: (petId, { weightKg, notes }) =>
     request(`/api/pets/${petId}/weights`, { method: 'POST', body: { weightKg, notes } }),
 };
