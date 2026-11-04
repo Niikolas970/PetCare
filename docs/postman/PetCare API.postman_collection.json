@@ -348,6 +348,139 @@
           "response": []
         },
         {
+          "name": "Ver mi usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Devuelve id, fullName y email del usuario del token\", function () {",
+                  "    pm.expect(body.id).to.eql(Number(pm.collectionVariables.get(\"userAId\")));",
+                  "    pm.expect(body.fullName).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(body.email).to.eql(pm.collectionVariables.get(\"testEmail\").toLowerCase());",
+                  "});",
+                  "",
+                  "pm.test(\"Solo expone id, fullName y email (nunca la contraseña)\", function () {",
+                  "    pm.expect(Object.keys(body).sort()).to.eql([\"email\", \"fullName\", \"id\"]);",
+                  "    pm.expect(body).to.not.have.property(\"passwordHash\");",
+                  "    pm.expect(body).to.not.have.property(\"password\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver mi usuario sin token (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: Debes iniciar sesión para acceder a este recurso\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Debes iniciar sesión para acceder a este recurso\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver mi usuario con token inválido (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"No devuelve datos del usuario\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.not.have.property(\"email\");",
+                  "    pm.expect(body).to.not.have.property(\"fullName\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token.invalido.123",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Iniciar sesión con contraseña incorrecta (debe fallar)",
           "event": [
             {
