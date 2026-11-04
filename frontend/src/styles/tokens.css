@@ -1,0 +1,107 @@
+/* Variante B «Miel»: crema con tinte miel y caramelo profundo.
+   Todo el color vive en estas variables; los componentes no usan hex sueltos. */
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('../assets/fonts/outfit-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  src: url('../assets/fonts/caveat-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Superficies */
+  --bg: #f5eadd;
+  --surface: #fff9f1;
+  --surface-raised: #ffffff;
+  --surface-sunken: #efe0ce;
+
+  /* Marca */
+  --primary: #98591f;
+  --primary-strong: #86491a;
+  --primary-light: #a86a32;
+  --primary-tint: #f0dcc3;
+  --on-primary: #ffffff;
+
+  /* Texto (contraste AA sobre --bg y --surface) */
+  --text: #2a1d14;
+  --text-2: #6a5a4d;
+  --text-3: #9a8a7d; /* solo íconos y adornos, nunca texto */
+
+  /* Tonos por categoría: color del ícono, texto fuerte y fondo pastel */
+  --sage: #4f7f5d;
+  --sage-text: #3b654a;
+  --sage-bg: #dceadf;
+  --blue: #4a6fa5;
+  --blue-text: #3a5b8c;
+  --blue-bg: #e1e9f4;
+  --amber: #b4691a;
+  --amber-text: #8a4a0c;
+  --amber-bg: #fbe5cc;
+  --rose: #b0483f;
+  --rose-text: #9c322c;
+  --rose-bg: #f8dedb;
+  --violet: #5e57b8;
+  --violet-text: #4c46a0;
+  --violet-bg: #e6e4f6;
+  --clay: #7b5a3c;
+  --clay-text: #6a4a2e;
+  --clay-bg: #f0dcc3;
+
+  /* Estados */
+  --ok-text: var(--sage-text);
+  --ok-bg: var(--sage-bg);
+  --soon-text: var(--amber-text);
+  --soon-bg: var(--amber-bg);
+  --late-text: var(--rose-text);
+  --late-bg: var(--rose-bg);
+  --focus: #98591f;
+
+  /* Forma */
+  --r-xl: 24px;
+  --r-lg: 20px;
+  --r-md: 16px;
+  --r-pill: 999px;
+  --shadow-card: 0 10px 28px rgba(110, 70, 30, 0.1), 0 2px 6px rgba(110, 70, 30, 0.05);
+  --shadow-float: 0 4px 14px rgba(110, 70, 30, 0.12);
+
+  /* Espaciado */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --tap: 44px;
+
+  /* Superficies extra */
+  --honey: #f8e4c9;
+  --nav-active: #f8ebdc;
+  --line: rgba(110, 70, 30, 0.12);
+  --shadow-panel: 0 1px 2px rgba(110, 70, 30, 0.05), 0 6px 18px rgba(110, 70, 30, 0.05);
+
+  /* Tipografía: cuerpo 16, secundario 14, H1 34, títulos de sección 20. Nada por debajo de 14 px. */
+  --font: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-script: 'Caveat', 'Segoe Script', cursive;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-section: 1.25rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-h1: 2.125rem;
+
+  /* Movimiento (curvas fuertes: ease-out para entrar, ease-in-out para moverse en pantalla) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
