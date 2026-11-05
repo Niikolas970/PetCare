@@ -35,4 +35,7 @@ public interface CareTaskRepository extends JpaRepository<CareTask, Long> {
     List<CareTask> findTop10ByPetIdInOrderByCreatedAtDesc(Collection<Long> petIds);
 
     List<CareTask> findBySourceDoseIdAndStatus(Long sourceDoseId, CareTaskStatus status);
+
+    // Calendario: todas las tareas (cualquier estado) con dueAt dentro de la ventana visible
+    List<CareTask> findByPetIdInAndDueAtBetweenOrderByDueAtAsc(Collection<Long> petIds, LocalDateTime from, LocalDateTime to);
 }

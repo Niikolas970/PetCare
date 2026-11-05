@@ -145,18 +145,6 @@ export default function CalendarPage() {
   const [notice, setNotice] = useState(null);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
-  useEffect(() => {
-    if (!selectedId) return undefined;
-    const controller = new AbortController();
-    Promise.all([
-      // range=all: todas las tareas de las mascotas activas del hogar (cualquier estado)
-      tasksApi.listForHousehold(selectedId, { range: 'all' }, controller.signal),
-      petsApi.list(selectedId, controller.signal),
-    ])
-      .then(([tasks, pets]) => setData({ tasks: tasks.filter((t) => t.status !== 'CANCELLED'), pets, error: null }))
-      .catch((error) => error.name !== 'AbortError' && setData((d) => ({ ...d, error })));
-    return () => controller.abort();
-  }, [selectedId, version]);
 
   const byDay = useMemo(() => {
     const map = new Map();
@@ -172,6 +160,24 @@ export default function CalendarPage() {
   }, [data.tasks, petFilter]);
 
   const days = view === 'week' ? Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(anchor), i)) : monthDays(anchor);
+  const rangeFrom = days[0];
+  const rangeTo = days[days.length - 1];
+
+  // Solo se pide el rango visible (from/to): semana o mes, con los días de relleno
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    const controller = new AbortController();
+    setData((d) => ({ ...d, loading: true }));
+    Promise.all([
+      tasksApi.listForHousehold(selectedId, { from: rangeFrom, to: rangeTo }, controller.signal),
+      petsApi.list(selectedId, controller.signal),
+    ])
+      .then(([tasks, pets]) =>
+        setData({ tasks: tasks.filter((t) => t.status !== 'CANCELLED'), pets, error: null, loading: false }),
+      )
+      .catch((error) => error.name !== 'AbortError' && setData((d) => ({ ...d, error, loading: false })));
+    return () => controller.abort();
+  }, [selectedId, version, rangeFrom, rangeTo]);
   const period =
     view === 'week'
       ? rangeFmt.formatRange(utc(days[0]), utc(days[6]))
@@ -265,7 +271,7 @@ export default function CalendarPage() {
       {!error && !data.tasks && <Loader block text="Cargando el calendario…" />}
 
       {data.tasks && (
-        <div className={`cal-layout cal-${view}`}>
+        <div className={`cal-layout cal-${view}`} aria-busy={data.loading || undefined}>
           <div className="cal-board">
             {view === 'month' && (
               <div className="cal-weekdays" aria-hidden="true">

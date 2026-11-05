@@ -31,6 +31,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 
 @Configuration
 public class SecurityConfig {
@@ -56,9 +57,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 // Usa el bean corsConfigurationSource de CorsConfig (responde también a los preflight OPTIONS)
                 .cors(Customizer.withDefaults())
-                // Headers de seguridad por defecto de Spring Security: X-Content-Type-Options: nosniff,
-                // X-Frame-Options: DENY, Cache-Control: no-store, HSTS (solo en HTTPS) y X-XSS-Protection: 0
-                .headers(Customizer.withDefaults())
+                // Headers de seguridad. Por defecto Spring Security ya envía X-Content-Type-Options: nosniff,
+                // X-Frame-Options: DENY, Cache-Control: no-store, HSTS (solo en HTTPS) y X-XSS-Protection: 0.
+                // Se agregan Referrer-Policy y CSP frame-ancestors 'none' (equivalente moderno de X-Frame-Options).
+                // La CSP solo restringe el enmarcado para no romper Swagger UI en desarrollo.
+                .headers(headers -> headers
+                        .referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("frame-ancestors 'none'")))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()

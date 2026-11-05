@@ -52,10 +52,15 @@ export const dashboardApi = {
 
 export const tasksApi = {
   // GET /api/households/{householdId}/tasks?range=upcoming|overdue|all&days=N -> [CareTaskResponse]
-  listForHousehold: (householdId, { range, days } = {}, signal) => {
+  // ?from=&to= (AAAA-MM-DD, juntos, máx. 366 días): todas las tareas con dueAt en ese rango
+  listForHousehold: (householdId, { range, days, from, to } = {}, signal) => {
     const params = new URLSearchParams();
     if (range) params.set('range', range);
     if (days) params.set('days', String(days));
+    if (from && to) {
+      params.set('from', from);
+      params.set('to', to);
+    }
     return request(`/api/households/${householdId}/tasks?${params}`, { signal });
   },
   // GET /api/pets/{petId}/tasks?status=PENDING

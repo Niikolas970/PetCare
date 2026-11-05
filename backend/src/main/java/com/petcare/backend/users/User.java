@@ -1,5 +1,7 @@
 package com.petcare.backend.users;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -16,6 +18,8 @@ public class User {
     @Column(nullable = false, unique = true, length = 190)
     private String email;
 
+    // Nunca se serializa, aunque por error se devolviera la entidad (los endpoints usan UserResponse/MemberResponse)
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 

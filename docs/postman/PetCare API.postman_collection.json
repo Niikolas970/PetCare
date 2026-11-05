@@ -5549,6 +5549,309 @@
           "response": []
         },
         {
+          "name": "Listar tareas del hogar por rango de fechas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "const iso = (x) => x.toISOString().slice(0, 10);",
+                  "const from = new Date(d); from.setDate(d.getDate() - 30);",
+                  "const to = new Date(d); to.setDate(d.getDate() + 60);",
+                  "pm.collectionVariables.set(\"rangeFrom\", iso(from));",
+                  "pm.collectionVariables.set(\"rangeTo\", iso(to));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const from = pm.collectionVariables.get(\"rangeFrom\");",
+                  "const to = pm.collectionVariables.get(\"rangeTo\");",
+                  "",
+                  "pm.test(\"Devuelve tareas solo dentro del rango (cualquier estado)\", function () {",
+                  "    pm.expect(body).to.be.an(\"array\").that.is.not.empty;",
+                  "    body.forEach(t => {",
+                  "        pm.expect(t.dueAt.slice(0, 10) >= from && t.dueAt.slice(0, 10) <= to).to.be.true;",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?from={{rangeFrom}}&to={{rangeTo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{rangeFrom}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{rangeTo}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango de fechas incompleto (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: Indica from y to juntos (formato AAAA-MM-DD)\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Indica from y to juntos (formato AAAA-MM-DD)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?from={{rangeFrom}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{rangeFrom}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango de fechas invertido (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: La fecha 'from' no puede ser posterior a 'to'\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"La fecha 'from' no puede ser posterior a 'to'\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?from={{rangeTo}}&to={{rangeFrom}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{rangeTo}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{rangeFrom}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango de fechas de más de 366 días (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: El rango entre from y to no puede superar 366 días\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"El rango entre from y to no puede superar 366 días\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?from=2025-01-01&to=2026-12-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2025-01-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango de fechas con range=upcoming (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: from y to solo se pueden usar con range=all\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"from y to solo se pueden usar con range=all\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?range=upcoming&from={{rangeFrom}}&to={{rangeTo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "upcoming"
+                },
+                {
+                  "key": "from",
+                  "value": "{{rangeFrom}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{rangeTo}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rango con fecha mal escrita (debe fallar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje: El parámetro from tiene un valor inválido\", function () {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"El parámetro from tiene un valor inválido\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/households/{{householdId}}/tasks?from=hoy&to={{rangeTo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "households",
+                "{{householdId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "hoy"
+                },
+                {
+                  "key": "to",
+                  "value": "{{rangeTo}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Panel del hogar",
           "event": [
             {
@@ -8509,6 +8812,14 @@
     },
     {
       "key": "voidDoseTaskId",
+      "value": ""
+    },
+    {
+      "key": "rangeFrom",
+      "value": ""
+    },
+    {
+      "key": "rangeTo",
       "value": ""
     }
   ]

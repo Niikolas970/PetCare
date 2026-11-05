@@ -296,6 +296,62 @@ class CareTaskServiceTest {
         assertThat(service.cancelPendingForDose(42L)).isEmpty();
     }
 
+    // ---------- Ventana from/to (calendario) ----------
+
+    @Test
+    @DisplayName("from/to devuelve todas las tareas con dueAt en el rango, del inicio de from al final de to")
+    void listForHouseholdWithDateWindow() {
+        when(petService.listActiveInHousehold(HOUSEHOLD)).thenReturn(List.of(pet));
+        LocalDate from = LocalDate.of(2026, 11, 1);
+        LocalDate to = LocalDate.of(2026, 11, 30);
+        CareTask inWindow = task(3L, CareTaskStatus.COMPLETED, LocalDateTime.of(2026, 11, 15, 9, 0));
+        when(taskRepository.findByPetIdInAndDueAtBetweenOrderByDueAtAsc(
+                org.mockito.ArgumentMatchers.argThat(ids -> ids.size() == 1 && ids.contains(PET)),
+                org.mockito.ArgumentMatchers.eq(from.atStartOfDay()),
+                org.mockito.ArgumentMatchers.eq(LocalDateTime.of(2026, 11, 30, 23, 59, 59))))
+                .thenReturn(List.of(inWindow));
+
+        List<CareTaskResponse> result = service.listForHousehold(HOUSEHOLD, USER, null, null, from, to);
+
+        assertThat(result).extracting(CareTaskResponse::id).containsExactly(3L);
+        assertThat(result.get(0).petName()).isEqualTo("Coco");
+    }
+
+    @Test
+    @DisplayName("from sin to responde 400")
+    void fromWithoutToIsRejected() {
+        assertThatThrownBy(() -> service.listForHousehold(HOUSEHOLD, USER, null, null, LocalDate.of(2026, 11, 1), null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Indica from y to juntos (formato AAAA-MM-DD)");
+    }
+
+    @Test
+    @DisplayName("from posterior a to responde 400")
+    void invertedWindowIsRejected() {
+        assertThatThrownBy(() -> service.listForHousehold(HOUSEHOLD, USER, null, null,
+                LocalDate.of(2026, 12, 1), LocalDate.of(2026, 11, 1)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("La fecha 'from' no puede ser posterior a 'to'");
+    }
+
+    @Test
+    @DisplayName("Un rango de más de 366 días responde 400")
+    void tooLongWindowIsRejected() {
+        assertThatThrownBy(() -> service.listForHousehold(HOUSEHOLD, USER, null, null,
+                LocalDate.of(2026, 1, 1), LocalDate.of(2027, 1, 2)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("366 días");
+    }
+
+    @Test
+    @DisplayName("from/to con range=upcoming responde 400")
+    void windowWithOtherRangeIsRejected() {
+        assertThatThrownBy(() -> service.listForHousehold(HOUSEHOLD, USER, "upcoming", null,
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("from y to solo se pueden usar con range=all");
+    }
+
     private CareTask givenTask(Long id, CareTaskStatus status, LocalDateTime dueAt) {
         CareTask task = task(id, status, dueAt);
         when(taskRepository.findByIdAndPetId(id, PET)).thenReturn(Optional.of(task));

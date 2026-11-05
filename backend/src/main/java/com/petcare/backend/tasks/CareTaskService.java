@@ -3,6 +3,7 @@ package com.petcare.backend.tasks;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ public class CareTaskService {
 
     public static final int DEFAULT_DAYS = 7;
     private static final int MAX_DAYS = 365;
+    static final int MAX_RANGE_DAYS = 366;
 
     // Hora a la que se agenda la tarea generada por una vacuna/desparasitación
     private static final LocalTime GENERATED_TASK_TIME = LocalTime.of(9, 0);
@@ -165,10 +167,21 @@ public class CareTaskService {
 
     @Transactional(readOnly = true)
     public List<CareTaskResponse> listForHousehold(Long householdId, Long userId, String rangeParam, Integer days) {
+        return listForHousehold(householdId, userId, rangeParam, days, null, null);
+    }
+
+    /**
+     * from/to (días en la hora del hogar, ambos incluidos) limitan range=all a una ventana de fechas:
+     * el calendario pide solo lo visible. Van juntos, from ≤ to, máximo MAX_RANGE_DAYS días.
+     */
+    @Transactional(readOnly = true)
+    public List<CareTaskResponse> listForHousehold(Long householdId, Long userId, String rangeParam, Integer days,
+                                                   LocalDate from, LocalDate to) {
         accessService.requireMember(householdId, userId);
 
-        TaskRange range = Optional.ofNullable(EnumParams.parse(TaskRange.class, rangeParam, "range"))
-                .orElse(TaskRange.UPCOMING);
+        TaskRange parsed = EnumParams.parse(TaskRange.class, rangeParam, "range");
+        boolean dated = validateDateRange(from, to, parsed);
+        TaskRange range = dated ? TaskRange.ALL : Optional.ofNullable(parsed).orElse(TaskRange.UPCOMING);
         int window = validateDays(days);
 
         Map<Long, String> petNames = activePetNames(householdId);
@@ -177,6 +190,11 @@ public class CareTaskService {
         }
 
         LocalDateTime now = clock.now(householdId);
+        if (dated) {
+            return taskRepository.findByPetIdInAndDueAtBetweenOrderByDueAtAsc(
+                            petNames.keySet(), from.atStartOfDay(), to.atTime(LocalTime.of(23, 59, 59)))
+                    .stream().map(t -> CareTaskResponse.of(t, petNames.get(t.getPetId()), now)).toList();
+        }
         List<CareTask> tasks = switch (range) {
             case UPCOMING -> taskRepository.findByPetIdInAndStatusAndDueAtBetweenOrderByDueAtAsc(
                     petNames.keySet(), CareTaskStatus.PENDING, now, endOfWindow(householdId, window));
@@ -251,6 +269,26 @@ public class CareTaskService {
     private LocalDateTime endOfWindow(Long householdId, int days) {
         LocalDate lastDay = clock.today(householdId).plusDays(days);
         return lastDay.atTime(LocalTime.of(23, 59, 59));
+    }
+
+    // true si hay ventana de fechas válida; 400 si está a medias, invertida, es demasiado larga o choca con range
+    private static boolean validateDateRange(LocalDate from, LocalDate to, TaskRange range) {
+        if (from == null && to == null) {
+            return false;
+        }
+        if (from == null || to == null) {
+            throw new BadRequestException("Indica from y to juntos (formato AAAA-MM-DD)");
+        }
+        if (from.isAfter(to)) {
+            throw new BadRequestException("La fecha 'from' no puede ser posterior a 'to'");
+        }
+        if (ChronoUnit.DAYS.between(from, to) + 1 > MAX_RANGE_DAYS) {
+            throw new BadRequestException("El rango entre from y to no puede superar " + MAX_RANGE_DAYS + " días");
+        }
+        if (range != null && range != TaskRange.ALL) {
+            throw new BadRequestException("from y to solo se pueden usar con range=all");
+        }
+        return true;
     }
 
     private int validateDays(Integer days) {
