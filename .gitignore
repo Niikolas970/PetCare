@@ -23,3 +23,6 @@ application-local.yml
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Notas locales (credenciales de demo, etc.)
+*.local.md

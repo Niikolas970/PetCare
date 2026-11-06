@@ -17,7 +17,9 @@
 --
 -- Cómo usarlo en MySQL Workbench:
 --   1. Ejecuta el script completo. El primer SELECT muestra cuántas filas se borrarán por tabla.
---   2. Si los números son los esperados, deja el COMMIT del final. Si no, cámbialo por ROLLBACK.
+--   2. El script NO confirma solo: el COMMIT del final está comentado y la transacción queda abierta.
+--      Revisa la vista previa y SELECT email FROM users; luego ejecuta COMMIT; o ROLLBACK; a mano
+--      en la misma pestaña (si cierras la conexión sin COMMIT, MySQL deshace los cambios).
 --   Requiere un usuario con permiso DELETE (p. ej. root), no petcare_app.
 -- =====================================================
 
@@ -137,8 +139,8 @@ DELETE FROM households WHERE id IN (SELECT id FROM tmp_cleanup_households);
 DELETE FROM users WHERE id IN (SELECT id FROM tmp_cleanup_users);
 
 -- ---------- 3. Confirmar ----------
--- Revisa la vista previa. Si algo no cuadra, cambia COMMIT por ROLLBACK antes de ejecutar.
-COMMIT;
+-- Revisa la vista previa y SELECT email FROM users; luego ejecuta COMMIT; o ROLLBACK; a mano
+-- COMMIT;
 
 DROP TEMPORARY TABLE IF EXISTS tmp_cleanup_users;
 DROP TEMPORARY TABLE IF EXISTS tmp_cleanup_pets;
