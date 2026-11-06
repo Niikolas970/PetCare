@@ -263,8 +263,10 @@
 }
 .cal-pet-link {
   display: inline-block;
-  padding: 12px 2px;
-  margin: -12px -2px;
+  min-width: 44px;
+  padding: 12px 6px;
+  margin: -12px -6px;
+  text-align: center;
   color: var(--primary);
   font-weight: 600;
 }

@@ -53,11 +53,28 @@ async function api(method, path, body, { expect } = {}) {
 
 // ---------- Fechas (hora local del hogar) ----------
 let TODAY; // "YYYY-MM-DD" según el backend
+let NOW; // "YYYY-MM-DDTHH:mm:ss" ahora, en la zona del hogar
+
+// "Ahora" en la zona horaria del hogar: el backend rechaza registros con fecha futura
+function nowIn(timeZone) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date())
+      .map((x) => [x.type, x.value]),
+  );
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
+}
+
+// Fecha relativa a hoy. Los registros de hoy nunca quedan después de "ahora" (por eso se recortan).
 function day(offset, time = '09:00') {
   const d = new Date(`${TODAY}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + offset);
   return `${d.toISOString().slice(0, 10)}T${time}:00`;
 }
+const past = (offset, time) => {
+  const value = day(offset, time);
+  return value > NOW ? NOW : value;
+};
 const date = (offset) => day(offset).slice(0, 10);
 const round = (n, decimals = 2) => Math.round(n * 10 ** decimals) / 10 ** decimals;
 
@@ -71,7 +88,9 @@ async function main() {
     if (err.status === 409) {
       console.error(`Ya existe una cuenta con ${EMAIL}. No se modificó nada.`);
       console.error('Usa otro PETCARE_DEMO_EMAIL o entra con la cuenta existente.');
-      process.exit(2);
+      // exitCode y return (no process.exit): en Windows, salir con fetch abierto hace fallar a Node
+      process.exitCode = 2;
+      return;
     }
     throw err;
   }
@@ -80,6 +99,7 @@ async function main() {
   const [household] = await api('GET', '/api/households', undefined, { expect: 200 });
   await api('PUT', `/api/households/${household.id}`, { name: 'Casa de Mariana', timezone: 'America/Bogota' }, { expect: 200 });
   TODAY = (await api('GET', `/api/households/${household.id}/dashboard`, undefined, { expect: 200 })).today;
+  NOW = nowIn('America/Bogota');
 
   // ---------- Mascotas ----------
   const pet = (body) => api('POST', '/api/pets', { householdId: household.id, ...body }, { expect: 201 });
@@ -105,7 +125,7 @@ async function main() {
     for (let w = 8; w >= 0; w -= 1) {
       const progress = (8 - w) / 8;
       const jitter = ((w * 37) % 5 - 2) * (end - start) * 0.04;
-      await record(p, 'weights', { weightKg: round(start + (end - start) * progress + jitter), occurredAt: day(-w * 7, '08:15') });
+      await record(p, 'weights', { weightKg: round(start + (end - start) * progress + jitter, 1), occurredAt: past(-w * 7, '08:15') });
     }
   }
   console.log('Pesos semanales registrados.');
@@ -119,44 +139,44 @@ async function main() {
   for (let d = 59; d >= 0; d -= 1) {
     for (const p of [luna, milo, kiwi]) {
       const [food, quantity] = foods[p.id];
-      await record(p, 'meals', { food, quantity, occurredAt: day(-d, p === kiwi ? '18:00' : '07:30') });
+      await record(p, 'meals', { food, quantity, occurredAt: past(-d, p === kiwi ? '18:00' : '07:30') });
     }
-    if (d % 6 === 0) await record(luna, 'meals', { food: 'Snack de zanahoria', quantity: '2 unidades', occurredAt: day(-d, '16:00') });
+    if (d % 6 === 0) await record(luna, 'meals', { food: 'Snack de zanahoria', quantity: '2 unidades', occurredAt: past(-d, '16:00') });
   }
   console.log('Comidas de 60 días registradas.');
 
   // ---------- Bienestar: cada 4 días (Milo decae con la otitis y se recupera) ----------
   const moods = ['GOOD', 'VERY_GOOD', 'GOOD', 'NORMAL', 'GOOD'];
   for (let d = 56; d >= 0; d -= 4) {
-    await record(luna, 'wellbeing', { mood: moods[d % moods.length], energy: 'HIGH', appetite: 'NORMAL', occurredAt: day(-d, '19:00') });
+    await record(luna, 'wellbeing', { mood: moods[d % moods.length], energy: 'HIGH', appetite: 'NORMAL', occurredAt: past(-d, '19:00') });
     const sick = d <= 12 && d >= 8;
     await record(milo, 'wellbeing', {
       mood: sick ? 'BAD' : 'GOOD',
       energy: sick ? 'LOW' : 'NORMAL',
       appetite: sick ? 'LOW' : 'NORMAL',
-      occurredAt: day(-d, '20:00'),
+      occurredAt: past(-d, '20:00'),
       notes: sick ? 'Se rasca la oreja izquierda y duerme más de lo normal.' : null,
     });
-    if (d % 8 === 0) await record(kiwi, 'wellbeing', { mood: 'GOOD', energy: 'NORMAL', appetite: 'HIGH', occurredAt: day(-d, '18:30') });
+    if (d % 8 === 0) await record(kiwi, 'wellbeing', { mood: 'GOOD', energy: 'NORMAL', appetite: 'HIGH', occurredAt: past(-d, '18:30') });
   }
   console.log('Registros de bienestar listos.');
 
   // ---------- Salud ----------
   await record(luna, 'health-records', {
-    recordType: 'CONSULTATION', title: 'Chequeo anual', veterinarian: 'Dra. Paula Méndez', occurredAt: day(-50, '10:00'),
+    recordType: 'CONSULTATION', title: 'Chequeo anual', veterinarian: 'Dra. Paula Méndez', occurredAt: past(-50, '10:00'),
     description: 'Buen estado general. Se recomienda mantener el peso y revisar dientes en 6 meses.',
   });
-  await record(luna, 'doses', { kind: 'VACCINE', productName: 'Rabia (anual)', occurredAt: day(-50, '10:30'), nextDueOn: date(315) });
-  await record(luna, 'doses', { kind: 'DEWORMING', productName: 'Desparasitante oral', occurredAt: day(-40, '09:00'), nextDueOn: date(50) });
-  await record(milo, 'doses', { kind: 'VACCINE', productName: 'Triple felina', occurredAt: day(-30, '11:00'), nextDueOn: date(335) });
+  await record(luna, 'doses', { kind: 'VACCINE', productName: 'Rabia (anual)', occurredAt: past(-50, '10:30'), nextDueOn: date(315) });
+  await record(luna, 'doses', { kind: 'DEWORMING', productName: 'Desparasitante oral', occurredAt: past(-40, '09:00'), nextDueOn: date(50) });
+  await record(milo, 'doses', { kind: 'VACCINE', productName: 'Triple felina', occurredAt: past(-30, '11:00'), nextDueOn: date(335) });
   await record(milo, 'health-records', {
-    recordType: 'DIAGNOSIS', title: 'Otitis leve', veterinarian: 'Dr. Andrés Gil', occurredAt: day(-10, '17:00'),
+    recordType: 'DIAGNOSIS', title: 'Otitis leve', veterinarian: 'Dr. Andrés Gil', occurredAt: past(-10, '17:00'),
     description: 'Inflamación leve en el oído izquierdo. Gotas por 14 días y control al terminar.',
   });
   await record(milo, 'treatments', {
-    medication: 'Gotas óticas', dosage: '3 gotas', frequency: 'Cada 12 horas', occurredAt: day(-10, '18:00'), endsOn: date(4),
+    medication: 'Gotas óticas', dosage: '3 gotas', frequency: 'Cada 12 horas', occurredAt: past(-10, '18:00'), endsOn: date(4),
   });
-  await record(kiwi, 'doses', { kind: 'DEWORMING', productName: 'Antiparasitario para conejos', occurredAt: day(-25, '10:00'), nextDueOn: date(65) });
+  await record(kiwi, 'doses', { kind: 'DEWORMING', productName: 'Antiparasitario para conejos', occurredAt: past(-25, '10:00'), nextDueOn: date(65) });
   console.log('Historial de salud listo.');
 
   // ---------- Cuidados ----------
@@ -182,5 +202,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(`Error: ${err.message}`);
-  process.exit(1);
+  process.exitCode = 1;
 });
